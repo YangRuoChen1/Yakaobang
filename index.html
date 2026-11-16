@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1e3a8a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="鸭考帮" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='24' fill='%231d4ed8'/%3E%3Ctext x='64' y='84' font-family='Arial,sans-serif' font-weight='900' font-size='56' fill='white' text-anchor='middle'%3E%E9%B8%AD%3C/text%3E%3C/svg%3E" />
+  <title>鸭考帮 · 医学课内智能刷题系统</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    mark.ykb-hl {
+      background-color: #fef08a;
+      color: #0f172a;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.06); }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.4); border-radius: 9999px; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+    // =========================================================================
+    // 1. INLINE SVG ICONS
+    // =========================================================================
+    const Icon = ({ name, className = "w-5 h-5" }) => {
+      const paths = {
+        flag: <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></>,
+        chevronLeft: <polyline points="15 18 9 12 15 6" />,
+        chevronRight: <polyline points="9 18 15 12 9 6" />,
+        chevronDown: <polyline points="6 9 12 15 18 9" />,
+        moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
+        sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></>,
+        check: <polyline points="20 6 9 17 4 12" />,
+        x: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
+        book: <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />,
+        user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+        cloud: <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />,
+        sparkles: <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />,
+        trash: <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
+        play: <polygon points="5 3 19 12 5 21 5 3" />,
+        flame: <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />,
+        alert: <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>,
+        key: <><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" /></>,
+        plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
+        copy: <><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></>,
+        refresh: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></>,
+        settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></>
+      };
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          {paths[name] || null}
+        </svg>
+      );
+    };
+
+    // =========================================================================
+    // 2. INITIAL FLEXIBLE CURRICULUM & SAMPLE QUESTIONS
+    // =========================================================================
+    const DEFAULT_CURRICULUM = {
+      version: 1,
+      semesters: [
+        { id: "sem_3a", name: "大三上", order: 1 },
+        { id: "sem_3b", name: "大三下", order: 2 }
+      ],
+      subjects: [
+        { id: "sub_pathophys", semesterId: "sem_3a", name: "病理生理学", desc: "水电解质、酸碱平衡、休克与器官衰竭", order: 1 },
+        { id: "sub_parasit", semesterId: "sem_3a", name: "人体寄生虫学", desc: "原虫、蠕虫、医学节肢动物", order: 2 },
+        { id: "sub_pharm", semesterId: "sem_3b", name: "药理学", desc: "传出神经、心血管与抗菌药物", order: 1 },
+        { id: "sub_diag", semesterId: "sem_3b", name: "临床诊断学", desc: "症状学、体格检查与实验室诊断", order: 2 }
+      ],
+      chapters: [
+        { id: "ch_pp_1", subjectId: "sub_pathophys", name: "第一章 绪论与水电解质代谢紊乱", order: 1 },
+        { id: "ch_pp_2", subjectId: "sub_pathophys", name: "第二章 酸碱平衡紊乱", order: 2 },
+        { id: "ch_par_1", subjectId: "sub_parasit", name: "第一章 医学原虫（疟原虫与阿米巴）", order: 1 },
+        { id: "ch_ph_1", subjectId: "sub_pharm", name: "第一章 传出神经系统药理", order: 1 },
+        { id: "ch_dg_1", subjectId: "sub_diag", name: "第一章 常见症状与体格检查", order: 1 }
+      ]
+    };
+
+    const SAMPLE_QUESTIONS = [
+      {
+        id: "ykb_demo_1",
+        chapterId: "ch_pp_1",
+        type: "choice",
+        isMultiple: false,
+        stem: "【示例单选】低渗性脱水患者早期最易出现哪种临床表现？",
+        options: {
+          A: "明显口渴、尿少、尿比重增高",
+          B: "外周循环衰竭（血压下降、脉搏细速）",
+          C: "中枢神经系统高渗性脑细胞脱水",
+          D: "全身重度凹陷性水肿"
+        },
+        answer: "B",
+        explanation: "低渗性脱水时细胞外液丢失且渗透压降低，水向细胞内转移，导致血容量进一步减少，早期即可出现明显的外周循环衰竭征象；因细胞外液低渗刺激下丘脑渗透压感受器减弱，早期口渴反而不明显。",
+        keyPoint: "低渗性脱水：易休克、早期无明显口渴、皮肤弹性减退。"
+      },
+      {
+        id: "ykb_demo_2",
+        chapterId: "ch_pp_1",
+        type: "blank",
+        stem: "【示例填空】高钾血症时，心电图最早期的特征性改变是 T 波____；急性抢救时，为迅速拮抗高钾对心肌的毒性，首选静脉注射____。",
+        blanks: ["高尖/高耸", "葡萄糖酸钙/10%葡萄糖酸钙"],
+        explanation: "高钾血症使心肌细胞静息电位负值减小、复极 3 期钾外流加速，心电图表现为 T 波高尖（帐篷样 T 波），QRS 波群增宽。10% 葡萄糖酸钙可迅速提高阈电位，恢复静息电位与阈电位的差值，即刻拮抗心肌毒性。",
+        keyPoint: "高钾护心首选：10% 葡萄糖酸钙。"
+      },
+      {
+        id: "ykb_demo_3",
+        chapterId: "ch_pp_2",
+        type: "case",
+        stem: "【示例案例分析】患者男性，68岁，因“慢性咳嗽、咳痰 20 年，气促加重伴意识模糊 2 天”入院。查体：嗜睡，球结膜水肿，口唇发绀，双肺可闻及散在干湿啰音。血气分析：pH 7.26，PaCO2 78 mmHg，HCO3- 34 mmol/L，PaO2 48 mmHg。",
+        subQuestions: [
+          {
+            type: "choice",
+            isMultiple: false,
+            stem: "1. 该患者最可能的酸碱平衡紊乱类型是？",
+            options: {
+              A: "急性呼吸性酸中毒",
+              B: "慢性呼吸性酸中毒（失代偿）",
+              C: "代谢性酸中毒合并呼吸性碱中毒",
+              D: "急性呼吸性碱中毒"
+            },
+            answer: "B",
+            explanation: "COPD 病史 20 年，PaCO2 显著升高 (78 mmHg > 45 mmHg)，pH < 7.35，同时 HCO3- 已代偿性升高至 34 mmol/L（按慢性呼酸代偿公式 ΔHCO3- ≈ 0.35 × ΔPaCO2 ≈ 0.35 × 38 = 13.3，预期 HCO3- ≈ 37.3 mmol/L），符合慢性呼吸性酸中毒。"
+          },
+          {
+            type: "text",
+            stem: "2. 简述该患者出现“意识模糊、球结膜水肿”的病理生理学机制及氧疗原则。",
+            answer: "机制：肺性脑病（高碳酸血症引起脑血管扩张、脑血流量增加及脑细胞酸中毒、脑水肿）。氧疗原则：持续低流量低浓度吸氧（1-2 L/min，FiO2 24%-28%）。",
+            explanation: "高浓度吸氧会解除低氧对外周化学感受器的兴奋作用，抑制呼吸中枢，加重二氧化碳潴留，诱发或加重肺性脑病。"
+          }
+        ],
+        explanation: "慢性阻塞性肺疾病急性加重 (AECOPD) 合并 II 型呼吸衰竭及肺性脑病是病生期末与临床诊断核心考点。",
+        keyPoint: "慢性呼酸 + 肺性脑病 + 低流量吸氧。"
+      }
+    ];
+
+    const DEFAULT_CLOUD_CFG = {
+      url: "https://jaexrgcleikvtdyfkmef.supabase.co",
+      anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphZXhyZ2NsZWlrdnRkeWZrbWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3NDI1NDUsImV4cCI6MjExMDMxODU0NX0._KIV3kaoBQD17-QdAgeGvWEyksTX4CCpUPu_UUI-GOY"
+    };
+    const SAVED_CRED_KEY = "ykb_saved_cred_v1";
+    const CURRENT_USER_KEY = "ykb_current_user_v1";
+    const GLOBAL_CLOUD_KEY = "__yakaobang_global_v1__";
+    const INVITE_CLOUD_KEY = "__yakaobang_invites_v1__";
+
+    const encodeCred = (s) => { try { return btoa(unescape(encodeURIComponent(s || ""))); } catch { return ""; } };
+    const decodeCred = (s) => { try { return decodeURIComponent(escape(atob(s || ""))); } catch { return ""; } };
+    const safeGetStorage = (key, fallback) => {
+      try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
+    };
+    const safeSetStorage = (key, value) => {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    };
+    const getUserKey = (uname, suffix) => `ykb_u_${uname || "guest"}_${suffix}`;
+
+    // =========================================================================
+    // 3. STUDY DAY BOUNDARY (03:00 AM - 03:00 AM) & CHECK-IN HELPERS
+    // =========================================================================
+    function getStudyDateKey(nowMs = Date.now()) {
+      const shifted = new Date(nowMs - 3 * 3600 * 1000);
+      const y = shifted.getFullYear();
+      const m = String(shifted.getMonth() + 1).padStart(2, "0");
+      const d = String(shifted.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function computeCheckInStats(dailyLogs) {
+      const checkedKeys = Object.keys(dailyLogs || {})
+        .filter(k => k >= "2026-10-01" && k <= "2056-10-01" && (dailyLogs[k]?.qCount || 0) >= 1)
+        .sort();
+      const totalDays = checkedKeys.length;
+      let maxStreak = 0, curStreak = 0, prevDate = null;
+      checkedKeys.forEach(k => {
+        const dt = new Date(k + "T00:00:00");
+        if (prevDate && Math.round((dt - prevDate) / 86400000) === 1) curStreak += 1;
+        else curStreak = 1;
+        if (curStreak > maxStreak) maxStreak = curStreak;
+        prevDate = dt;
+      });
+      return { totalDays, maxStreak, checkedSet: new Set(checkedKeys) };
+    }
+
+    // =========================================================================
+    // 4. FSRS ENGINE (FOR WRONG QUESTIONS)
+    // =========================================================================
+    const FSRS_DEFAULTS = {
+      w: [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61],
+      DECAY: -0.5,
+      FACTOR: 19 / 81
+    };
+    function createInitialFSRS(nowMs = Date.now()) {
+      return { state: "New", stability: 0.4, difficulty: 5.0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0, lastReview: nowMs, due: nowMs };
+    }
+    function fsrsSchedule(cardFsrs, grade, targetRetention = 0.90, nowMs = Date.now()) {
+      const w = FSRS_DEFAULTS.w;
+      const f = cardFsrs || createInitialFSRS(nowMs);
+      const elapsedDays = f.lastReview ? Math.max(0, (nowMs - f.lastReview) / 86400000) : 0;
+      const clampD = (d) => Math.min(10, Math.max(1, d));
+      const nextIvl = (s) => Math.max(1, Math.round((s / FSRS_DEFAULTS.FACTOR) * (Math.pow(0.90, 1 / FSRS_DEFAULTS.DECAY) - 1)));
+      let nextS = f.stability, nextD = f.difficulty, nextState = f.state, nextLapses = f.lapses || 0, nextDays = 1, dueMs = nowMs;
+      if (f.reps === 0 || f.state === "New") {
+        nextD = clampD(w[4] - Math.exp(w[5] * (grade - 1)) + 1);
+        nextS = Math.max(0.1, w[grade - 1]);
+        if (grade === 1) { nextState = "Learning"; nextDays = 0; dueMs = nowMs + 600000; }
+        else if (grade === 2) { nextState = "Learning"; nextDays = 0.5; dueMs = nowMs + 43200000; }
+        else { nextState = "Review"; nextDays = nextIvl(nextS); dueMs = nowMs + nextDays * 86400000; }
+      } else {
+        const R = f.stability > 0 ? Math.pow(1 + FSRS_DEFAULTS.FACTOR * (elapsedDays / f.stability), FSRS_DEFAULTS.DECAY) : 0;
+        nextD = clampD(w[7] * w[4] + (1 - w[7]) * clampD(f.difficulty - w[6] * (grade - 3)));
+        if (grade === 1) {
+          nextLapses += 1; nextState = "Relearning";
+          nextS = Math.max(0.2, w[11] * Math.pow(nextD, -w[12]) * (Math.pow(f.stability + 1, w[13]) - 1) * Math.exp(w[14] * (1 - R)));
+          nextDays = 0; dueMs = nowMs + 600000;
+        } else {
+          nextS = f.stability * (1 + Math.exp(w[8]) * (11 - nextD) * Math.pow(f.stability, -w[9]) * (Math.exp(w[10] * (1 - R)) - 1) * (grade === 2 ? w[15] : 1) * (grade === 4 ? w[16] : 1));
+          nextState = "Review"; nextDays = nextIvl(nextS); dueMs = nowMs + nextDays * 86400000;
+        }
+      }
+      return { state: nextState, stability: Number(nextS.toFixed(2)), difficulty: Number(nextD.toFixed(2)), elapsedDays: Number(elapsedDays.toFixed(2)), scheduledDays: nextDays, reps: (f.reps || 0) + 1, lapses: nextLapses, lastReview: nowMs, due: dueMs };
+    }
+    function formatFsrsInterval(nextFsrs, nowMs = Date.now()) {
+      const diffMin = Math.round((nextFsrs.due - nowMs) / 60000);
+      if (diffMin < 60) return `${Math.max(1, diffMin)} 分钟`;
+      const diffHours = Math.round(diffMin / 60);
+      if (diffHours < 24) return `${diffHours} 小时`;
+      return `${Math.round(diffHours / 24)} 天`;
+    }
+
+    // =========================================================================
+    // 5. INVITE CODE & ANSWER MATCH HELPERS
+    // =========================================================================
+    function generateInviteCodeString() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const seg = (n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      return `YKB-${seg(4)}-${seg(4)}`;
+    }
+
+    function checkBlankMatch(userVal, expectedStr) {
+      const u = String(userVal || "").trim().toLowerCase().replace(/\s+/g, "");
+      if (!u) return false;
+      const alts = String(expectedStr || "").split(/[\/｜|]/).map(s => s.trim().toLowerCase().replace(/\s+/g, "")).filter(Boolean);
+      return alts.includes(u);
+    }
+
+    function renderHighlightedText(text, highlights = []) {
+      if (!text) return null;
+      if (!highlights || highlights.length === 0) return text;
+      const escaped = highlights.filter(Boolean).map(h => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      if (escaped.length === 0) return text;
+      const parts = text.split(new RegExp(`(${escaped.join("|")})`, "g"));
+      return parts.map((part, idx) => highlights.includes(part) ? <mark key={idx} className="ykb-hl">{part}</mark> : <React.Fragment key={idx}>{part}</React.Fragment>);
+    }
+
+    function copyTextSafe(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+        return;
+      }
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+
+    // =========================================================================
+    // 6. MAIN APP COMPONENT
+    // =========================================================================
+    function App() {
+      const [currentUser, setCurrentUser] = useState(() => safeGetStorage(CURRENT_USER_KEY, "guest"));
+      const isAdmin = ["yangrch2@gmail.com", "yangruochen1"].includes(String(currentUser || "").toLowerCase());
+      const cloudCfg = DEFAULT_CLOUD_CFG;
+
+      // Global Curriculum & Question Bank (Synced & Controlled by Admin)
+      const [curriculum, setCurriculum] = useState(() => safeGetStorage("ykb_global_curriculum_v1", DEFAULT_CURRICULUM));
+      const [questions, setQuestions] = useState(() => safeGetStorage("ykb_global_questions_v1", SAMPLE_QUESTIONS));
+
+      // Per-User Personal Data
+      const [attemptedMap, setAttemptedMap] = useState(() => safeGetStorage(getUserKey(currentUser, "attempted"), {}));
+      const [mistakes, setMistakes] = useState(() => safeGetStorage(getUserKey(currentUser, "mistakes"), []));
+      const [markedIds, setMarkedIds] = useState(() => safeGetStorage(getUserKey(currentUser, "marked"), []));
+      const [notesMap, setNotesMap] = useState(() => safeGetStorage(getUserKey(currentUser, "notes"), {}));
+      const [highlightsMap, setHighlightsMap] = useState(() => safeGetStorage(getUserKey(currentUser, "highlights"), {}));
+      const [dailyLogs, setDailyLogs] = useState(() => safeGetStorage(getUserKey(currentUser, "dailyLogs"), {}));
+      const [lastPosMap, setLastPosMap] = useState(() => safeGetStorage(getUserKey(currentUser, "lastPos"), {}));
+
+      useEffect(() => safeSetStorage(CURRENT_USER_KEY, currentUser), [currentUser]);
+      useEffect(() => safeSetStorage("ykb_global_curriculum_v1", curriculum), [curriculum]);
+      useEffect(() => safeSetStorage("ykb_global_questions_v1", questions), [questions]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "attempted"), attemptedMap), [attemptedMap, currentUser]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "mistakes"), mistakes), [mistakes, currentUser]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "marked"), markedIds), [markedIds, currentUser]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "notes"), notesMap), [notesMap, currentUser]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "highlights"), highlightsMap), [highlightsMap, currentUser]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "dailyLogs"), dailyLogs), [dailyLogs, currentUser]);
+      useEffect(() => safeSetStorage(getUserKey(currentUser, "lastPos"), lastPosMap), [lastPosMap, currentUser]);
+
+      // Navigation & UI State
+      const [view, setView] = useState("DASHBOARD"); // DASHBOARD | CHAPTER_OVERVIEW | PRACTICE | TEST_RESULT
+      const [selectedSemesterId, setSelectedSemesterId] = useState(() => (curriculum.semesters[0]?.id || ""));
+      const [selectedSubjectId, setSelectedSubjectId] = useState(() => (curriculum.subjects[0]?.id || ""));
+      const [activeChapterId, setActiveChapterId] = useState(null);
+      const [selectedPracticeMode, setSelectedPracticeMode] = useState("practice"); // practice | quick | recite | test
+      const [toast, setToast] = useState(null);
+      const [syncStatus, setSyncStatus] = useState(null);
+
+      // Auth & Invite Code States
+      const [authMode, setAuthMode] = useState("login"); // login | register | reset
+      const [savedCredInit] = useState(() => safeGetStorage(SAVED_CRED_KEY, { rememberPwd: false, autoLogin: false, email: "", pwdEnc: "" }));
+      const [authEmail, setAuthEmail] = useState(() => savedCredInit?.email || "");
+      const [authPassword, setAuthPassword] = useState(() => savedCredInit?.rememberPwd ? decodeCred(savedCredInit?.pwdEnc) : "");
+      const [authInviteCode, setAuthInviteCode] = useState("");
+      const [rememberPwd, setRememberPwd] = useState(() => Boolean(savedCredInit?.rememberPwd));
+      const [autoLogin, setAutoLogin] = useState(() => Boolean(savedCredInit?.autoLogin));
+      const manualLogoutRef = useRef(false);
+      const [authOtp, setAuthOtp] = useState("");
+      const [otpSent, setOtpSent] = useState(false);
+      const [otpCooldown, setOtpCooldown] = useState(0);
+      const [authBusy, setAuthBusy] = useState(false);
+      const [newResetPassword, setNewResetPassword] = useState("");
+      const [showAuthModal, setShowAuthModal] = useState(false);
+      const [cloudBusy, setCloudBusy] = useState(false);
+
+      // Calendar State (2026-10 to 2056-10)
+      const [calYear, setCalYear] = useState(() => Math.min(2056, Math.max(2026, new Date().getFullYear())));
+      const [calMonth, setCalMonth] = useState(() => {
+        const now = new Date();
+        return (now.getFullYear() <= 2026 && now.getMonth() < 9) ? 9 : now.getMonth();
+      });
+
+      // Active Practice Session State
+      const [session, setSession] = useState(null);
+      // session = { chapterId, mode, qIds, currentIndex, choiceAnswers: {}, blankAnswers: {}, caseAnswers: {}, submitted: {}, elapsedSec, testSubmitted }
+      const [darkMode, setDarkMode] = useState(false);
+      const [textSize, setTextSize] = useState(1);
+      const [highlightMode, setHighlightMode] = useState(false);
+      const [showNotesModal, setShowNotesModal] = useState(false);
+      const [zoomImage, setZoomImage] = useState(null);
+      const [showMistakeModal, setShowMistakeModal] = useState(false);
+      const [mistakeRevealed, setMistakeRevealed] = useState(false);
+
+      // Admin Management Modal State
+      const [showAdminModal, setShowAdminModal] = useState(false);
+      const [adminTab, setAdminTab] = useState("structure"); // structure | import | addQ | browse | invites
+      const [newSemName, setNewSemName] = useState("");
+      const [newSubName, setNewSubName] = useState("");
+      const [newSubSemId, setNewSubSemId] = useState("");
+      const [newChName, setNewChName] = useState("");
+      const [newChSubId, setNewChSubId] = useState("");
+      const [editingNode, setEditingNode] = useState(null); // { kind: 'sem'|'sub'|'ch', id, name }
+
+      // Admin Question Import / Editor
+      const [impChapterId, setImpChapterId] = useState("");
+      const [impJsonText, setImpJsonText] = useState("");
+      const [impPreview, setImpPreview] = useState(null);
+      const [qType, setQType] = useState("choice"); // choice | blank | case
+      const [qChapterId, setQChapterId] = useState("");
+      const [qStem, setQStem] = useState("");
+      const [qImg, setQImg] = useState("");
+      const [qIsMultiple, setQIsMultiple] = useState(false);
+      const [qOpts, setQOpts] = useState({ A: "", B: "", C: "", D: "", E: "" });
+      const [qChoiceAns, setQChoiceAns] = useState("A");
+      const [qBlanksStr, setQBlanksStr] = useState("");
+      const [qCaseSubs, setQCaseSubs] = useState([
+        { type: "choice", isMultiple: false, stem: "", options: { A: "", B: "", C: "", D: "" }, answer: "A", explanation: "" }
+      ]);
+      const [qExp, setQExp] = useState("");
+      const [qKeyPoint, setQKeyPoint] = useState("");
+      const [browseChapterFilter, setBrowseChapterFilter] = useState("ALL");
+      const [browseTypeFilter, setBrowseTypeFilter] = useState("ALL");
+      const [selectedQIds, setSelectedQIds] = useState([]);
+      const [moveTargetChId, setMoveTargetChId] = useState("");
+
+      // Admin Invite Codes
+      const [inviteList, setInviteList] = useState([]);
+      const [inviteGenCount, setInviteGenCount] = useState(10);
+      const [inviteGenNote, setInviteGenNote] = useState("");
+      const [inviteBusy, setInviteBusy] = useState(false);
+
+      const showToast = useCallback((msg, type = "info") => setToast({ msg, type, id: Date.now() }), []);
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 3000);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      useEffect(() => {
+        if (otpCooldown <= 0) return;
+        const t = setTimeout(() => setOtpCooldown(c => Math.max(0, c - 1)), 1000);
+        return () => clearTimeout(t);
+      }, [otpCooldown]);
+
+      // Keep selectedSemesterId / selectedSubjectId valid when curriculum changes
+      useEffect(() => {
+        if (curriculum.semesters.length > 0 && !curriculum.semesters.some(s => s.id === selectedSemesterId)) {
+          setSelectedSemesterId(curriculum.semesters[0].id);
+        }
+      }, [curriculum.semesters, selectedSemesterId]);
+
+      useEffect(() => {
+        const subsInSem = curriculum.subjects.filter(s => s.semesterId === selectedSemesterId);
+        if (subsInSem.length > 0 && !subsInSem.some(s => s.id === selectedSubjectId)) {
+          setSelectedSubjectId(subsInSem[0].id);
+        } else if (subsInSem.length === 0) {
+          setSelectedSubjectId("");
+        }
+      }, [curriculum.subjects, selectedSemesterId, selectedSubjectId]);
+
+      useEffect(() => {
+        if (!newSubSemId && curriculum.semesters[0]) setNewSubSemId(curriculum.semesters[0].id);
+        if (!newChSubId && curriculum.subjects[0]) setNewChSubId(curriculum.subjects[0].id);
+        if (!impChapterId && curriculum.chapters[0]) setImpChapterId(curriculum.chapters[0].id);
+        if (!qChapterId && curriculum.chapters[0]) setQChapterId(curriculum.chapters[0].id);
+        if (!moveTargetChId && curriculum.chapters[0]) setMoveTargetChId(curriculum.chapters[0].id);
+      }, [curriculum]);
+
+      // Study Time Tracker (03:00 AM - 03:00 AM boundary)
+      useEffect(() => {
+        if (currentUser === "guest") return;
+        if (view !== "PRACTICE") return;
+        const timer = setInterval(() => {
+          const dk = getStudyDateKey();
+          setDailyLogs(prev => {
+            const cur = prev[dk] || { studySec: 0, qCount: 0, qCorrect: 0 };
+            return { ...prev, [dk]: { ...cur, studySec: (cur.studySec || 0) + 1 } };
+          });
+          setSession(prev => prev ? { ...prev, elapsedSec: (prev.elapsedSec || 0) + 1 } : prev);
+        }, 1000);
+        return () => clearInterval(timer);
+      }, [view, currentUser]);
+
+      const todayKey = getStudyDateKey();
+      const todayStats = dailyLogs[todayKey] || { studySec: 0, qCount: 0, qCorrect: 0 };
+      const todayAccuracy = todayStats.qCount > 0 ? Math.round((todayStats.qCorrect / todayStats.qCount) * 100) : null;
+      const checkInStats = useMemo(() => computeCheckInStats(dailyLogs), [dailyLogs]);
+
+      // =========================================================================
+      // 7. FORCE SYNC WITH ADMIN GLOBAL CLOUD BANK & AUTO-LOGIN
+      // =========================================================================
+      const pullGlobalForced = useCallback(async (silent = false) => {
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        const hdrs = { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + cloudCfg.anonKey };
+        if (!silent) setSyncStatus("正在强制同步管理员最新课程与题库...");
+        try {
+          const res = await fetch(`${baseUrl}/rest/v1/medspire_saves?username=eq.${encodeURIComponent(GLOBAL_CLOUD_KEY)}&select=data`, { headers: hdrs });
+          if (res.ok) {
+            const rows = await res.json();
+            const payload = rows?.[0]?.data;
+            if (payload && payload.curriculum && Array.isArray(payload.questions)) {
+              setCurriculum(payload.curriculum);
+              setQuestions(payload.questions);
+              if (!silent) showToast(`已强制同步最新题库：${payload.curriculum.subjects.length} 学科 · ${payload.questions.length} 题`, "success");
+            } else if (!silent) {
+              showToast("云端暂无已发布的全局题库，当前使用本地数据", "info");
+            }
+          }
+        } catch {
+          if (!silent) showToast("同步检查失败，请检查网络", "error");
+        } finally {
+          setSyncStatus(null);
+        }
+      }, []);
+
+      const publishGlobalForced = async () => {
+        if (!isAdmin) return;
+        setCloudBusy(true);
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        try {
+          const nextCur = { ...curriculum, version: Date.now() };
+          setCurriculum(nextCur);
+          const res = await fetch(`${baseUrl}/rest/v1/medspire_saves`, {
+            method: "POST",
+            headers: { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + cloudCfg.anonKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" },
+            body: JSON.stringify({
+              username: GLOBAL_CLOUD_KEY,
+              data: { curriculum: nextCur, questions, updatedAt: new Date().toISOString(), updatedBy: currentUser }
+            })
+          });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          showToast(`已发布！全端同学端下次打开/刷新将强制同步这 ${questions.length} 题与最新课程结构`, "success");
+        } catch (e) {
+          showToast("发布失败：" + e.message, "error");
+        } finally {
+          setCloudBusy(false);
+        }
+      };
+
+      // Startup auto-login & forced global sync
+      useEffect(() => {
+        pullGlobalForced(true);
+        if (currentUser !== "guest" || manualLogoutRef.current) return;
+        const cred = safeGetStorage(SAVED_CRED_KEY, null);
+        if (!cred?.autoLogin || !cred?.email || !cred?.pwdEnc) return;
+        const pwd = decodeCred(cred.pwdEnc);
+        if (!pwd || pwd.length < 6) return;
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        (async () => {
+          setAuthBusy(true);
+          try {
+            const res = await fetch(`${baseUrl}/auth/v1/token?grant_type=password`, {
+              method: "POST",
+              headers: { "apikey": cloudCfg.anonKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ email: cred.email, password: pwd })
+            });
+            const data = await res.json();
+            if (res.ok && (data.user?.email || cred.email)) {
+              switchToUser(data.user?.email || cred.email);
+              showToast(`已自动登录：${data.user?.email || cred.email}`, "success");
+            }
+          } catch {}
+          finally { setAuthBusy(false); }
+        })();
+      }, []);
+
+      // =========================================================================
+      // 8. INVITE CODE MANAGEMENT & AUTHENTICATION
+      // =========================================================================
+      const fetchInvites = async () => {
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        const hdrs = { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + cloudCfg.anonKey };
+        try {
+          const res = await fetch(`${baseUrl}/rest/v1/medspire_saves?username=eq.${encodeURIComponent(INVITE_CLOUD_KEY)}&select=data`, { headers: hdrs });
+          if (res.ok) {
+            const rows = await res.json();
+            const codes = rows?.[0]?.data?.codes;
+            if (Array.isArray(codes)) {
+              setInviteList(codes);
+              return codes;
+            }
+          }
+        } catch {}
+        return [];
+      };
+
+      const saveInvitesToCloud = async (codes) => {
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        const res = await fetch(`${baseUrl}/rest/v1/medspire_saves`, {
+          method: "POST",
+          headers: { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + cloudCfg.anonKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" },
+          body: JSON.stringify({ username: INVITE_CLOUD_KEY, data: { codes, updatedAt: new Date().toISOString() } })
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        setInviteList(codes);
+      };
+
+      const handleGenerateInvites = async () => {
+        if (!isAdmin) return;
+        setInviteBusy(true);
+        try {
+          const existing = await fetchInvites();
+          const existingSet = new Set(existing.map(c => c.code));
+          const count = Math.min(100, Math.max(1, Number(inviteGenCount) || 10));
+          const created = [];
+          const nowStr = new Date().toLocaleString("zh-CN", { hour12: false });
+          for (let i = 0; i < count; i++) {
+            let code = generateInviteCodeString();
+            while (existingSet.has(code)) code = generateInviteCodeString();
+            existingSet.add(code);
+            created.push({ code, status: "unused", createdAt: nowStr, note: inviteGenNote.trim() || "常规批次", usedBy: "", usedAt: "" });
+          }
+          await saveInvitesToCloud([...created, ...existing]);
+          setInviteGenNote("");
+          showToast(`成功生成 ${created.length} 个新邀请码并同步云端！`, "success");
+        } catch (e) {
+          showToast("生成邀请码失败：" + e.message, "error");
+        } finally {
+          setInviteBusy(false);
+        }
+      };
+
+      useEffect(() => {
+        if (showAdminModal && adminTab === "invites" && isAdmin) {
+          fetchInvites();
+        }
+      }, [showAdminModal, adminTab, isAdmin]);
+
+      const switchToUser = (uname) => {
+        setCurrentUser(uname);
+        setAttemptedMap(safeGetStorage(getUserKey(uname, "attempted"), {}));
+        setMistakes(safeGetStorage(getUserKey(uname, "mistakes"), []));
+        setMarkedIds(safeGetStorage(getUserKey(uname, "marked"), []));
+        setNotesMap(safeGetStorage(getUserKey(uname, "notes"), {}));
+        setHighlightsMap(safeGetStorage(getUserKey(uname, "highlights"), {}));
+        setDailyLogs(safeGetStorage(getUserKey(uname, "dailyLogs"), {}));
+        setLastPosMap(safeGetStorage(getUserKey(uname, "lastPos"), {}));
+        setView("DASHBOARD");
+      };
+
+      const sendEmailOtp = async (mode) => {
+        if (otpCooldown > 0) return;
+        const email = authEmail.trim();
+        if (!email || !email.includes("@")) { showToast("请输入有效的邮箱地址", "error"); return; }
+        if (mode === "register") {
+          if (authPassword.length < 6) { showToast("密码至少 6 位", "error"); return; }
+          const codeInput = authInviteCode.trim().toUpperCase();
+          if (!codeInput) { showToast("注册必须填写邀请码", "error"); return; }
+          setAuthBusy(true);
+          const codes = await fetchInvites();
+          const matched = codes.find(c => c.code.toUpperCase() === codeInput);
+          if (!matched) { setAuthBusy(false); showToast("邀请码无效，请向管理员索取", "error"); return; }
+          if (matched.status === "used") { setAuthBusy(false); showToast("该邀请码已被使用，请更换新邀请码", "error"); return; }
+        } else {
+          setAuthBusy(true);
+        }
+
+        try {
+          const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+          const headers = { "apikey": cloudCfg.anonKey, "Content-Type": "application/json" };
+          const endpoint = mode === "register" ? "signup" : "recover";
+          const body = mode === "register" ? { email, password: authPassword } : { email };
+          const res = await fetch(`${baseUrl}/auth/v1/${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.msg || data.error_description || data.message || ("HTTP " + res.status));
+          setOtpSent(true); setOtpCooldown(60);
+          showToast("验证码已发送至邮箱，请查收！", "success");
+        } catch (err) {
+          showToast("发送失败：" + (err.message || "请检查邮箱"), "error");
+        } finally {
+          setAuthBusy(false);
+        }
+      };
+
+      const handleAuthSubmit = async () => {
+        const email = authEmail.trim();
+        if (!email || !email.includes("@")) { showToast("请输入有效的邮箱地址", "error"); return; }
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        const headers = { "apikey": cloudCfg.anonKey, "Content-Type": "application/json" };
+        setAuthBusy(true);
+        try {
+          if (authMode === "login") {
+            if (authPassword.length < 6) throw new Error("密码至少 6 位");
+            const res = await fetch(`${baseUrl}/auth/v1/token?grant_type=password`, { method: "POST", headers, body: JSON.stringify({ email, password: authPassword }) });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error_description || data.msg || "邮箱或密码错误");
+            if (rememberPwd || autoLogin) {
+              safeSetStorage(SAVED_CRED_KEY, { rememberPwd: true, autoLogin, email, pwdEnc: encodeCred(authPassword) });
+            } else {
+              safeSetStorage(SAVED_CRED_KEY, { rememberPwd: false, autoLogin: false, email: "", pwdEnc: "" });
+            }
+            manualLogoutRef.current = false;
+            switchToUser(data.user?.email || email);
+            pullGlobalForced(true);
+            setShowAuthModal(false);
+            if (!rememberPwd) setAuthPassword("");
+            showToast(`登录成功！欢迎 ${email}`, "success");
+          } else if (authMode === "register") {
+            const codeInput = authInviteCode.trim().toUpperCase();
+            if (!codeInput) throw new Error("请填写有效邀请码");
+            if (!authOtp.trim()) throw new Error("请先输入邮箱验证码");
+            const codes = await fetchInvites();
+            const matched = codes.find(c => c.code.toUpperCase() === codeInput);
+            if (!matched || matched.status === "used") throw new Error("邀请码无效或已被他人使用");
+
+            const res = await fetch(`${baseUrl}/auth/v1/verify`, { method: "POST", headers, body: JSON.stringify({ type: "signup", email, token: authOtp.trim() }) });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error_description || data.msg || "验证码错误");
+
+            // Mark invite code as used
+            const updatedCodes = codes.map(c => c.code.toUpperCase() === codeInput ? {
+              ...c, status: "used", usedBy: email, usedAt: new Date().toLocaleString("zh-CN", { hour12: false })
+            } : c);
+            await saveInvitesToCloud(updatedCodes).catch(() => {});
+
+            switchToUser(data.user?.email || email);
+            pullGlobalForced(true);
+            setShowAuthModal(false); setAuthPassword(""); setAuthOtp(""); setAuthInviteCode(""); setOtpSent(false);
+            showToast("邀请码核销并注册成功！", "success");
+          } else if (authMode === "reset") {
+            if (!authOtp.trim() || newResetPassword.length < 6) throw new Error("请输入验证码与至少 6 位新密码");
+            const vRes = await fetch(`${baseUrl}/auth/v1/verify`, { method: "POST", headers, body: JSON.stringify({ type: "recovery", email, token: authOtp.trim() }) });
+            const vData = await vRes.json();
+            if (!vRes.ok || !vData.access_token) throw new Error("验证码无效或已过期");
+            const uRes = await fetch(`${baseUrl}/auth/v1/user`, { method: "PUT", headers: { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + vData.access_token, "Content-Type": "application/json" }, body: JSON.stringify({ password: newResetPassword }) });
+            if (!uRes.ok) throw new Error("新密码更新失败");
+            switchToUser(email);
+            setShowAuthModal(false); setAuthOtp(""); setNewResetPassword(""); setAuthMode("login");
+            showToast("密码重置成功！", "success");
+          }
+        } catch (err) {
+          showToast(err.message || "操作失败", "error");
+        } finally {
+          setAuthBusy(false);
+        }
+      };
+
+      const syncUserPersonalSave = async (direction) => {
+        if (currentUser === "guest") return;
+        setCloudBusy(true);
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        const saveKey = `ykb_user_${currentUser}`;
+        try {
+          if (direction === "push") {
+            const res = await fetch(`${baseUrl}/rest/v1/medspire_saves`, {
+              method: "POST",
+              headers: { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + cloudCfg.anonKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                username: saveKey,
+                data: { attemptedMap, mistakes, markedIds, notesMap, highlightsMap, dailyLogs, lastPosMap, updatedAt: new Date().toISOString() }
+              })
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            showToast("个人刷题进度、错题与打卡记录已同步至云端！", "success");
+          } else {
+            const res = await fetch(`${baseUrl}/rest/v1/medspire_saves?username=eq.${encodeURIComponent(saveKey)}&select=data`, {
+              headers: { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + cloudCfg.anonKey }
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const rows = await res.json();
+            const d = rows?.[0]?.data;
+            if (!d) { showToast("云端暂无个人进度存档", "info"); return; }
+            if (d.attemptedMap) setAttemptedMap(d.attemptedMap);
+            if (Array.isArray(d.mistakes)) setMistakes(d.mistakes);
+            if (Array.isArray(d.markedIds)) setMarkedIds(d.markedIds);
+            if (d.notesMap) setNotesMap(d.notesMap);
+            if (d.highlightsMap) setHighlightsMap(d.highlightsMap);
+            if (d.dailyLogs) setDailyLogs(d.dailyLogs);
+            if (d.lastPosMap) setLastPosMap(d.lastPosMap);
+            showToast("已从云端恢复个人刷题与打卡进度！", "success");
+          }
+        } catch (e) {
+          showToast("云同步失败：" + e.message, "error");
+        } finally {
+          setCloudBusy(false);
+        }
+      };
+
+      // =========================================================================
+      // 9. PRACTICE LOGIC (4 MODES + 3 QUESTION TYPES)
+      // =========================================================================
+      const activeChapter = useMemo(() => curriculum.chapters.find(c => c.id === activeChapterId) || null, [curriculum.chapters, activeChapterId]);
+      const activeChapterQuestions = useMemo(() => questions.filter(q => q.chapterId === activeChapterId), [questions, activeChapterId]);
+
+      const startChapterSession = (chapterId, mode, filterType = "all", startQid = null) => {
+        const chQs = questions.filter(q => q.chapterId === chapterId);
+        let targetQs = chQs;
+        if (filterType === "unused") targetQs = chQs.filter(q => !attemptedMap[q.id]);
+        else if (filterType === "wrong") targetQs = chQs.filter(q => attemptedMap[q.id] && !attemptedMap[q.id].lastCorrect);
+        else if (filterType === "marked") targetQs = chQs.filter(q => markedIds.includes(q.id));
+
+        if (targetQs.length === 0) {
+          showToast("当前筛选条件下暂无题目", "info");
+          return;
+        }
+        let startIdx = 0;
+        if (startQid) {
+          const foundIdx = targetQs.findIndex(q => q.id === startQid);
+          if (foundIdx >= 0) startIdx = foundIdx;
+        }
+        setSession({
+          chapterId,
+          mode,
+          qIds: targetQs.map(q => q.id),
+          currentIndex: startIdx,
+          choiceAnswers: {},
+          blankAnswers: {},
+          caseAnswers: {},
+          submitted: {},
+          elapsedSec: 0,
+          testSubmitted: false
+        });
+        setView("PRACTICE");
+      };
+
+      const evaluateQuestion = (q, sess) => {
+        if (q.type === "choice") {
+          const ans = sess.choiceAnswers[q.id] || "";
+          if (!ans) return false;
+          const norm = (s) => String(s).toUpperCase().split("").filter(c => /[A-Z]/.test(c)).sort().join("");
+          return norm(ans) === norm(q.answer);
+        }
+        if (q.type === "blank") {
+          const userBlanks = sess.blankAnswers[q.id] || [];
+          const expected = q.blanks || [];
+          if (expected.length === 0) return false;
+          return expected.every((exp, i) => checkBlankMatch(userBlanks[i], exp));
+        }
+        if (q.type === "case") {
+          const subs = q.subQuestions || [];
+          const uSubs = sess.caseAnswers[q.id] || {};
+          if (subs.length === 0) return false;
+          let choiceSubs = subs.map((s, idx) => ({ s, idx })).filter(x => x.s.type === "choice");
+          if (choiceSubs.length === 0) return true; // Self-graded text case
+          return choiceSubs.every(({ s, idx }) => {
+            const norm = (str) => String(str || "").toUpperCase().split("").filter(c => /[A-Z]/.test(c)).sort().join("");
+            return norm(uSubs[idx]) === norm(s.answer);
+          });
+        }
+        return false;
+      };
+
+      const commitQuestionResult = (q, isCorrect) => {
+        setAttemptedMap(prev => ({ ...prev, [q.id]: { lastCorrect: isCorrect, count: (prev[q.id]?.count || 0) + 1 } }));
+        setLastPosMap(prev => ({ ...prev, [q.chapterId]: q.id }));
+        const dk = getStudyDateKey();
+        setDailyLogs(prev => {
+          const cur = prev[dk] || { studySec: 0, qCount: 0, qCorrect: 0 };
+          return {
+            ...prev,
+            [dk]: {
+              ...cur,
+              qCount: (cur.qCount || 0) + 1,
+              qCorrect: (cur.qCorrect || 0) + (isCorrect ? 1 : 0)
+            }
+          };
+        });
+        if (!isCorrect) {
+          const nowMs = Date.now();
+          setMistakes(prev => {
+            const existing = prev.find(m => m.id === q.id);
+            const rec = {
+              id: q.id,
+              wrongCount: existing ? (existing.wrongCount || 1) + 1 : 1,
+              lastWrongAt: nowMs,
+              fsrs: existing?.fsrs ? fsrsSchedule(existing.fsrs, 1, 0.90, nowMs) : createInitialFSRS(nowMs)
+            };
+            return [rec, ...prev.filter(m => m.id !== q.id)];
+          });
+        }
+      };
+
+      const submitSingleInSession = (q, overrideChoice = null) => {
+        if (!session) return;
+        const updatedSess = overrideChoice !== null ? {
+          ...session,
+          choiceAnswers: { ...session.choiceAnswers, [q.id]: overrideChoice },
+          submitted: { ...session.submitted, [q.id]: true }
+        } : {
+          ...session,
+          submitted: { ...session.submitted, [q.id]: true }
+        };
+        const isCorrect = evaluateQuestion(q, updatedSess);
+        setSession(updatedSess);
+        if (!session.submitted[q.id]) {
+          commitQuestionResult(q, isCorrect);
+        }
+      };
+
+      const submitEntireTestExam = () => {
+        if (!session) return;
+        const newSub = { ...session.submitted };
+        let correctCnt = 0;
+        session.qIds.forEach(qid => {
+          const q = questions.find(item => item.id === qid);
+          if (!q) return;
+          const isCorrect = evaluateQuestion(q, session);
+          if (isCorrect) correctCnt++;
+          if (!newSub[qid]) {
+            commitQuestionResult(q, isCorrect);
+            newSub[qid] = true;
+          }
+        });
+        setSession(prev => ({ ...prev, submitted: newSub, testSubmitted: true, testCorrectCount: correctCnt }));
+        setView("TEST_RESULT");
+      };
+
+      const dueMistakes = useMemo(() => {
+        const now = Date.now();
+        const validQMap = new Map(questions.map(q => [q.id, q]));
+        return mistakes
+          .filter(m => validQMap.has(m.id) && (!m.fsrs || (m.fsrs.due || 0) <= now))
+          .map(m => ({ ...m, question: validQMap.get(m.id) }));
+      }, [mistakes, questions]);
+
+      // =========================================================================
+      // 10. ADMIN CURRICULUM & QUESTION CRUD
+      // =========================================================================
+      const addSemester = () => {
+        if (!newSemName.trim()) return;
+        setCurriculum(p => ({ ...p, semesters: [...p.semesters, { id: `sem_${Date.now()}`, name: newSemName.trim(), order: p.semesters.length + 1 }] }));
+        setNewSemName("");
+        showToast("已添加大类（学期），记得点击“发布至全端”同步给同学", "success");
+      };
+      const addSubject = () => {
+        if (!newSubName.trim() || !newSubSemId) return;
+        setCurriculum(p => ({ ...p, subjects: [...p.subjects, { id: `sub_${Date.now()}`, semesterId: newSubSemId, name: newSubName.trim(), desc: "课内学科", order: p.subjects.length + 1 }] }));
+        setNewSubName("");
+        showToast("已添加学科", "success");
+      };
+      const addChapter = () => {
+        if (!newChName.trim() || !newChSubId) return;
+        setCurriculum(p => ({ ...p, chapters: [...p.chapters, { id: `ch_${Date.now()}`, subjectId: newChSubId, name: newChName.trim(), order: p.chapters.length + 1 }] }));
+        setNewChName("");
+        showToast("已添加章节", "success");
+      };
+
+      const saveEditedNode = () => {
+        if (!editingNode || !editingNode.name.trim()) return;
+        if (editingNode.kind === "sem") {
+          setCurriculum(p => ({ ...p, semesters: p.semesters.map(s => s.id === editingNode.id ? { ...s, name: editingNode.name.trim() } : s) }));
+        } else if (editingNode.kind === "sub") {
+          setCurriculum(p => ({ ...p, subjects: p.subjects.map(s => s.id === editingNode.id ? { ...s, name: editingNode.name.trim() } : s) }));
+        } else if (editingNode.kind === "ch") {
+          setCurriculum(p => ({ ...p, chapters: p.chapters.map(c => c.id === editingNode.id ? { ...c, name: editingNode.name.trim() } : c) }));
+        }
+        setEditingNode(null);
+        showToast("名称已修改", "success");
+      };
+
+      const deleteSemester = (semId) => {
+        const subIds = new Set(curriculum.subjects.filter(s => s.semesterId === semId).map(s => s.id));
+        const chIds = new Set(curriculum.chapters.filter(c => subIds.has(c.subjectId)).map(c => c.id));
+        setCurriculum(p => ({
+          ...p,
+          semesters: p.semesters.filter(s => s.id !== semId),
+          subjects: p.subjects.filter(s => s.semesterId !== semId),
+          chapters: p.chapters.filter(c => !subIds.has(c.subjectId))
+        }));
+        setQuestions(p => p.filter(q => !chIds.has(q.chapterId)));
+        showToast("已删除该大类及其下属学科、章节和题目", "info");
+      };
+      const deleteSubject = (subId) => {
+        const chIds = new Set(curriculum.chapters.filter(c => c.subjectId === subId).map(c => c.id));
+        setCurriculum(p => ({
+          ...p,
+          subjects: p.subjects.filter(s => s.id !== subId),
+          chapters: p.chapters.filter(c => c.subjectId !== subId)
+        }));
+        setQuestions(p => p.filter(q => !chIds.has(q.chapterId)));
+        showToast("已删除该学科及其下属章节和题目", "info");
+      };
+      const deleteChapter = (chId) => {
+        setCurriculum(p => ({ ...p, chapters: p.chapters.filter(c => c.id !== chId) }));
+        setQuestions(p => p.filter(q => q.chapterId !== chId));
+        showToast("已删除该章节及其题目", "info");
+      };
+
+      const handleSaveManualQuestion = () => {
+        if (!isAdmin || !qChapterId || !qStem.trim()) { showToast("请选择章节并填写题干", "error"); return; }
+        let newQ = { id: `q_${Date.now()}`, chapterId: qChapterId, type: qType, stem: qStem.trim(), image: qImg || undefined, explanation: qExp.trim(), keyPoint: qKeyPoint.trim() };
+        if (qType === "choice") {
+          const cleanOpts = {};
+          Object.entries(qOpts).forEach(([k, v]) => { if (v.trim()) cleanOpts[k] = v.trim(); });
+          if (Object.keys(cleanOpts).length < 2) { showToast("请至少填写 2 个选项", "error"); return; }
+          newQ = { ...newQ, isMultiple: qIsMultiple, options: cleanOpts, answer: qChoiceAns.trim().toUpperCase() || "A" };
+        } else if (qType === "blank") {
+          const blanks = qBlanksStr.split("\n").map(s => s.trim()).filter(Boolean);
+          if (blanks.length === 0) { showToast("请填写填空答案（每行对应一个空）", "error"); return; }
+          newQ = { ...newQ, blanks };
+        } else if (qType === "case") {
+          const validSubs = qCaseSubs.filter(s => s.stem.trim());
+          if (validSubs.length === 0) { showToast("请至少填写 1 个案例子问题", "error"); return; }
+          newQ = { ...newQ, subQuestions: validSubs };
+        }
+        setQuestions(prev => [newQ, ...prev]);
+        setQStem(""); setQImg(""); setQOpts({ A: "", B: "", C: "", D: "", E: "" }); setQBlanksStr(""); setQExp(""); setQKeyPoint("");
+        showToast("题目已录入本地库！别忘了点“发布至全端”", "success");
+      };
+
+      const parseImportJson = (rawText) => {
+        try {
+          const parsed = JSON.parse((rawText || impJsonText).trim());
+          const arr = Array.isArray(parsed) ? parsed : [parsed];
+          const valid = arr.filter(q => q && q.stem).map((q, idx) => {
+            const type = ["choice", "blank", "case"].includes(q.type) ? q.type : "choice";
+            const targetCh = curriculum.chapters.some(c => c.id === q.chapterId) ? q.chapterId : impChapterId;
+            return {
+              id: q.id || `q_imp_${Date.now()}_${idx}`,
+              chapterId: targetCh,
+              type,
+              isMultiple: Boolean(q.isMultiple || (q.answer && String(q.answer).length > 1 && type === "choice")),
+              stem: String(q.stem).trim(),
+              image: q.image || q.vignetteImage || undefined,
+              options: q.options || undefined,
+              answer: q.answer ? String(q.answer).trim().toUpperCase() : undefined,
+              blanks: Array.isArray(q.blanks) ? q.blanks : undefined,
+              subQuestions: Array.isArray(q.subQuestions) ? q.subQuestions : undefined,
+              explanation: q.explanation || q.generalExplanation || "",
+              keyPoint: q.keyPoint || q.educationalObjective || ""
+            };
+          });
+          if (valid.length === 0) { showToast("未识别到有效题目", "error"); return; }
+          setImpPreview(valid);
+        } catch {
+          showToast("JSON 格式有误，请检查语法", "error");
+        }
+      };
+
+      // =========================================================================
+      // 11. RENDER
+      // =========================================================================
+      const formatTime = (sec) => `${String(Math.floor((sec || 0) / 60)).padStart(2, "0")}:${String((sec || 0) % 60).padStart(2, "0")}`;
+
+      const getChapterLabel = (chId) => {
+        const ch = curriculum.chapters.find(c => c.id === chId);
+        if (!ch) return "未分类章节";
+        const sub = curriculum.subjects.find(s => s.id === ch.subjectId);
+        const sem = sub ? curriculum.semesters.find(x => x.id === sub.semesterId) : null;
+        return `${sem ? sem.name + " · " : ""}${sub ? sub.name + " · " : ""}${ch.name}`;
+      };
+
+      return (
+        <div className={`min-h-screen flex flex-col ${darkMode && view === "PRACTICE" ? "bg-slate-950 text-slate-100" : "bg-slate-100 text-slate-900"}`}>
+          {toast && (
+            <div className={`fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl shadow-xl text-xs sm:text-sm font-semibold flex items-center gap-2 border ${
+              toast.type === "error" ? "bg-rose-600 text-white border-rose-400" :
+              toast.type === "success" ? "bg-emerald-600 text-white border-emerald-400" :
+              "bg-slate-800 text-white border-slate-600"
+            }`}>
+              <Icon name={toast.type === "error" ? "alert" : "sparkles"} className="w-4 h-4 shrink-0" />
+              <span>{toast.msg}</span>
+            </div>
+          )}
+
+          {/* LOGIN / INVITE-CODE REGISTRATION GATE */}
+          {currentUser === "guest" ? (
+            <div className="flex-1 min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+              <div className="w-full max-w-md bg-white text-slate-900 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-5">
+                <div className="text-center space-y-2">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-700 text-white flex items-center justify-center font-black text-2xl shadow-lg">鸭</div>
+                  <h1 className="text-xl font-extrabold text-slate-900">鸭考帮 · 课内医学刷题系统</h1>
+                  <p className="text-xs text-slate-500">支持全真章节刷题、背题、快刷、测试与云端同步 · 凭邀请码注册</p>
+                </div>
+                <div className="flex gap-2 text-xs">
+                  <button onClick={() => { setAuthMode("login"); setOtpSent(false); }} className={`flex-1 py-2 rounded-lg font-bold ${authMode === "login" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-600"}`}>登录</button>
+                  <button onClick={() => { setAuthMode("register"); setOtpSent(false); }} className={`flex-1 py-2 rounded-lg font-bold ${authMode === "register" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}>邀请码注册</button>
+                  <button onClick={() => { setAuthMode("reset"); setOtpSent(false); }} className={`flex-1 py-2 rounded-lg font-bold ${authMode === "reset" ? "bg-amber-600 text-white" : "bg-slate-100 text-slate-600"}`}>忘记密码</button>
+                </div>
+                <div className="space-y-3 text-xs">
+                  {authMode === "register" && (
+                    <div className="relative">
+                      <input type="text" value={authInviteCode} onChange={(e) => setAuthInviteCode(e.target.value.toUpperCase())} placeholder="输入专属邀请码（如 YKB-XXXX-XXXX）" className="w-full border-2 border-emerald-300 bg-emerald-50/40 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold tracking-wider uppercase" />
+                    </div>
+                  )}
+                  <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="输入邮箱地址" className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" />
+                  {authMode !== "reset" && <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="密码 (至少 6 位)" className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" />}
+                  {(authMode === "register" || authMode === "reset") && (
+                    <div className="space-y-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <div className="flex gap-2">
+                        <input type="text" value={authOtp} onChange={(e) => setAuthOtp(e.target.value)} placeholder="输入邮箱验证码" className="flex-1 border rounded-lg px-3 py-2 bg-white font-mono" />
+                        <button disabled={authBusy || otpCooldown > 0} onClick={() => sendEmailOtp(authMode)} className="px-3 py-2 rounded-lg bg-slate-800 text-white font-bold disabled:opacity-50 shrink-0">
+                          {authBusy ? "核验中..." : otpCooldown > 0 ? `${otpCooldown}s` : otpSent ? "重发" : "发送验证码"}
+                        </button>
+                      </div>
+                      {authMode === "reset" && <input type="password" value={newResetPassword} onChange={(e) => setNewResetPassword(e.target.value)} placeholder="设置新密码 (至少 6 位)" className="w-full border rounded-lg px-3 py-2 bg-white" />}
+                    </div>
+                  )}
+                  {authMode === "login" && (
+                    <div className="flex items-center justify-between pt-1 text-xs text-slate-600">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" checked={rememberPwd} onChange={(e) => { const v = e.target.checked; setRememberPwd(v); if (!v) setAutoLogin(false); }} className="accent-blue-700 w-3.5 h-3.5" />
+                        <span>记住密码</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" checked={autoLogin} onChange={(e) => { const v = e.target.checked; setAutoLogin(v); if (v) setRememberPwd(true); }} className="accent-blue-700 w-3.5 h-3.5" />
+                        <span>自动登录</span>
+                      </label>
+                    </div>
+                  )}
+                  <button disabled={authBusy} onClick={handleAuthSubmit} className="w-full py-3 rounded-xl bg-blue-700 hover:bg-blue-600 text-white font-extrabold text-sm shadow-lg">
+                    {authBusy ? "处理中..." : authMode === "register" ? "验证邀请码并完成注册" : authMode === "reset" ? "验证并重设密码" : "登录进入鸭考帮"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* =============================================================== */}
+              {/* VIEW 1: DASHBOARD                                               */}
+              {/* =============================================================== */}
+              {view === "DASHBOARD" && (
+                <>
+                  <header className="bg-blue-900 text-white shadow-md px-4 sm:px-6 py-3">
+                    <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-blue-600 border border-blue-400 flex items-center justify-center font-black text-base shadow">鸭</div>
+                        <div>
+                          <h1 className="font-bold text-base sm:text-lg leading-tight">鸭考帮 · 课内医学 QBank</h1>
+                          <p className="text-[11px] text-blue-200">学期-学科-章节自由架构 · 四模式刷题 · 每日 03:00 统计与打卡</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button onClick={() => pullGlobalForced(false)} className="px-3 py-1.5 rounded-lg bg-blue-800 hover:bg-blue-700 border border-blue-600 text-xs font-semibold flex items-center gap-1.5">
+                          <Icon name="refresh" className="w-3.5 h-3.5 text-sky-300" />
+                          <span>同步最新题库</span>
+                        </button>
+                        {isAdmin && (
+                          <button onClick={() => setShowAdminModal(true)} className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5">
+                            <Icon name="settings" className="w-3.5 h-3.5" />
+                            <span>管理后台 & 邀请码</span>
+                          </button>
+                        )}
+                        <button onClick={() => setShowAuthModal(true)} className="px-3 py-1.5 rounded-lg bg-blue-800 hover:bg-blue-700 border border-blue-600 text-xs font-semibold flex items-center gap-1.5">
+                          <Icon name="user" className="w-4 h-4 text-emerald-300" />
+                          <span className="max-w-[120px] truncate">{currentUser}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </header>
+
+                  <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+                    {syncStatus && (
+                      <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl px-4 py-2.5 text-xs font-bold flex items-center gap-2">
+                        <Icon name="cloud" className="w-4 h-4 animate-pulse" />
+                        <span>{syncStatus}</span>
+                      </div>
+                    )}
+
+                    {/* TODAY'S STATS + CHECK-IN CALENDAR */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                      <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between space-y-4">
+                        <div className="flex items-center justify-between border-b pb-2.5">
+                          <span className="font-bold text-sm text-slate-800">今日学习统计 (03:00 结算)</span>
+                          <span className="text-xs font-bold text-amber-600">🔥 累计 {checkInStats.totalDays} 天 · 连签 {checkInStats.maxStreak} 天</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2.5 text-center">
+                          <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                            <div className="text-[11px] text-slate-500">学习时长</div>
+                            <div className="text-lg font-extrabold text-blue-700 mt-0.5">{Math.floor(todayStats.studySec / 60)}分</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <div className="text-[11px] text-slate-500">今日做题</div>
+                            <div className="text-lg font-extrabold text-slate-800 mt-0.5">{todayStats.qCount} 题</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                            <div className="text-[11px] text-slate-500">今日正确率</div>
+                            <div className="text-lg font-extrabold text-emerald-700 mt-0.5">{todayAccuracy !== null ? `${todayAccuracy}%` : "--"}</div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full transition-all ${(todayStats.qCount || 0) >= 1 ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${(todayStats.qCount || 0) >= 1 ? 100 : 0}%` }} />
+                          </div>
+                          <div className="text-[11px] mt-1.5 font-semibold text-slate-500">
+                            {(todayStats.qCount || 0) >= 1 ? `🔥 今日已完成 ${todayStats.qCount} 题，日历火苗已点亮！` : "今日完成任意 1 题即可自动点亮日历火苗"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+                        {(() => {
+                          const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+                          const firstWeekday = new Date(calYear, calMonth, 1).getDay();
+                          const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+                          return (
+                            <div className="space-y-2.5">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                                  <Icon name="flame" className="w-4 h-4 text-amber-500" />
+                                  <span>学习签到日历</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <select value={calYear} onChange={(e) => setCalYear(Number(e.target.value))} className="border rounded-lg px-2 py-1 font-bold bg-slate-50">
+                                    {Array.from({ length: 31 }, (_, i) => 2026 + i).map(y => <option key={y} value={y}>{y} 年</option>)}
+                                  </select>
+                                  <select value={calMonth} onChange={(e) => setCalMonth(Number(e.target.value))} className="border rounded-lg px-2 py-1 font-bold bg-slate-50">
+                                    {Array.from({ length: 12 }, (_, m) => <option key={m} value={m} disabled={(calYear === 2026 && m < 9) || (calYear === 2056 && m > 9)}>{m + 1} 月</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
+                                {["日", "一", "二", "三", "四", "五", "六"].map(w => <div key={w} className="font-bold text-slate-400">{w}</div>)}
+                                {cells.map((d, i) => {
+                                  if (!d) return <div key={i} />;
+                                  const key = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                                  const isChecked = checkInStats.checkedSet.has(key);
+                                  const isToday = key === todayKey;
+                                  return (
+                                    <div key={i} className={`py-1 rounded-lg border flex flex-col items-center justify-center ${isChecked ? "bg-amber-100 border-amber-400 font-bold text-amber-900" : isToday ? "border-blue-500 bg-blue-50 font-bold" : "border-slate-100 text-slate-600"}`}>
+                                      <span>{isChecked ? "🔥" : d}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* SEMESTER TABS + MISTAKE REVIEW BUTTON */}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap gap-1.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+                        {curriculum.semesters.map(sem => (
+                          <button key={sem.id} onClick={() => setSelectedSemesterId(sem.id)} className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition ${selectedSemesterId === sem.id ? "bg-blue-700 text-white shadow" : "text-slate-600 hover:bg-slate-100"}`}>
+                            {sem.name}
+                          </button>
+                        ))}
+                      </div>
+                      <button onClick={() => { setMistakeRevealed(false); setShowMistakeModal(true); }} className="px-4 py-2 rounded-xl bg-white border border-rose-300 text-rose-700 text-xs font-bold hover:bg-rose-50 shadow-sm">
+                        FSRS 错题强化 ({dueMistakes.length} 到期 / {mistakes.length} 总)
+                      </button>
+                    </div>
+
+                    {/* SUBJECTS & CHAPTERS ACCORDION / GRID */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                      {/* Left: Subjects in Selected Semester */}
+                      <div className="lg:col-span-4 space-y-2.5">
+                        <div className="text-xs font-bold text-slate-500 px-1">选择学科：</div>
+                        {curriculum.subjects.filter(s => s.semesterId === selectedSemesterId).length === 0 ? (
+                          <div className="bg-white rounded-2xl border p-6 text-center text-xs text-slate-400">该学期下暂无学科</div>
+                        ) : curriculum.subjects.filter(s => s.semesterId === selectedSemesterId).map(sub => {
+                          const subChIds = new Set(curriculum.chapters.filter(c => c.subjectId === sub.id).map(c => c.id));
+                          const subQs = questions.filter(q => subChIds.has(q.chapterId));
+                          const doneCnt = subQs.filter(q => attemptedMap[q.id]).length;
+                          const isSel = selectedSubjectId === sub.id;
+                          return (
+                            <button key={sub.id} onClick={() => setSelectedSubjectId(sub.id)} className={`w-full text-left p-4 rounded-2xl border-2 transition ${isSel ? "bg-blue-700 text-white border-blue-700 shadow-lg" : "bg-white text-slate-800 border-slate-200 hover:border-blue-300"}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="font-extrabold text-sm sm:text-base">{sub.name}</span>
+                                <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${isSel ? "bg-blue-600 text-blue-100" : "bg-slate-100 text-slate-600"}`}>{doneCnt}/{subQs.length}</span>
+                              </div>
+                              <div className={`text-[11px] mt-1 ${isSel ? "text-blue-100" : "text-slate-400"}`}>{subChIds.size} 个章节 · {sub.desc || "课内重点题库"}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right: Chapters in Selected Subject */}
+                      <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                        <div className="flex items-center justify-between border-b pb-3">
+                          <h2 className="font-bold text-base text-slate-800">
+                            {curriculum.subjects.find(s => s.id === selectedSubjectId)?.name || "章节列表"} · 章节目录
+                          </h2>
+                          <span className="text-xs text-slate-400">点击章节进入总览与模式选择</span>
+                        </div>
+                        {curriculum.chapters.filter(c => c.subjectId === selectedSubjectId).length === 0 ? (
+                          <div className="py-12 text-center text-xs text-slate-400">该学科下暂无章节</div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {curriculum.chapters.filter(c => c.subjectId === selectedSubjectId).map(ch => {
+                              const chQs = questions.filter(q => q.chapterId === ch.id);
+                              const doneQs = chQs.filter(q => attemptedMap[q.id]);
+                              const correctQs = doneQs.filter(q => attemptedMap[q.id]?.lastCorrect);
+                              const acc = doneQs.length > 0 ? Math.round((correctQs.length / doneQs.length) * 100) : null;
+                              return (
+                                <div key={ch.id} onClick={() => { setActiveChapterId(ch.id); setView("CHAPTER_OVERVIEW"); }} className="p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer transition flex flex-wrap items-center justify-between gap-3">
+                                  <div className="space-y-1">
+                                    <div className="font-bold text-sm text-slate-800">{ch.name}</div>
+                                    <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
+                                      <span>共 {chQs.length} 题</span>
+                                      <span>· 已刷 {doneQs.length} 题</span>
+                                      {acc !== null && <span className="text-emerald-700 font-semibold">· 正确率 {acc}%</span>}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
+                                      <div className="h-full bg-blue-600" style={{ width: `${chQs.length ? Math.round((doneQs.length / chQs.length) * 100) : 0}%` }} />
+                                    </div>
+                                    <span className="px-3 py-1.5 rounded-lg bg-blue-700 text-white text-xs font-bold">进入章节</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </main>
+                </>
+              )}
+
+              {/* =============================================================== */}
+              {/* VIEW 2: CHAPTER OVERVIEW (医考帮/蓝基因式章节总览与题号自由起点)  */}
+              {/* =============================================================== */}
+              {view === "CHAPTER_OVERVIEW" && activeChapter && (() => {
+                const chQs = activeChapterQuestions;
+                const doneCnt = chQs.filter(q => attemptedMap[q.id]).length;
+                const wrongCnt = chQs.filter(q => attemptedMap[q.id] && !attemptedMap[q.id].lastCorrect).length;
+                const correctCnt = doneCnt - wrongCnt;
+                const acc = doneCnt > 0 ? Math.round((correctCnt / doneCnt) * 100) : 0;
+                const lastQid = lastPosMap[activeChapter.id];
+                const lastIdx = lastQid ? chQs.findIndex(q => q.id === lastQid) : -1;
+
+                const typeCnt = {
+                  choice: chQs.filter(q => q.type === "choice").length,
+                  blank: chQs.filter(q => q.type === "blank").length,
+                  case: chQs.filter(q => q.type === "case").length
+                };
+
+                return (
+                  <div className="flex-1 flex flex-col">
+                    <header className="bg-blue-900 text-white px-4 sm:px-6 py-3 shadow flex items-center justify-between">
+                      <button onClick={() => setView("DASHBOARD")} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold hover:text-blue-200">
+                        <Icon name="chevronLeft" className="w-4 h-4" /> 返回目录
+                      </button>
+                      <div className="font-bold text-sm truncate max-w-md">{activeChapter.name}</div>
+                      <div className="w-16" />
+                    </header>
+
+                    <main className="max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-5">
+                      {/* Chapter Stats Card */}
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <div className="text-xs text-blue-700 font-bold">{getChapterLabel(activeChapter.id)}</div>
+                            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5">{activeChapter.name}</h2>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 font-semibold">选择 {typeCnt.choice}</span>
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 font-semibold">填空 {typeCnt.blank}</span>
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 font-semibold">案例 {typeCnt.case}</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          <div className="p-2.5 rounded-xl bg-slate-50 border"><div className="text-[11px] text-slate-500">总题数</div><div className="text-base font-extrabold">{chQs.length}</div></div>
+                          <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-100"><div className="text-[11px] text-slate-500">已做</div><div className="text-base font-extrabold text-blue-700">{doneCnt}</div></div>
+                          <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-100"><div className="text-[11px] text-slate-500">错题</div><div className="text-base font-extrabold text-rose-600">{wrongCnt}</div></div>
+                          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100"><div className="text-[11px] text-slate-500">正确率</div><div className="text-base font-extrabold text-emerald-700">{doneCnt > 0 ? `${acc}%` : "--"}</div></div>
+                        </div>
+                      </div>
+
+                      {/* 4 Modes Selection */}
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                        <div className="font-bold text-sm text-slate-800">选择刷题模式：</div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-left">
+                          {[
+                            ["practice", "📝 练习模式", "做完一题点提交答案，立即出解析"],
+                            ["quick", "⚡ 快刷模式", "点击选项直接提交并显示答案解析"],
+                            ["recite", "📖 背题模式", "直接展示答案与解析，高效记忆"],
+                            ["test", "🎯 测试模式", "整章作答交卷后统一出分与全部解析"]
+                          ].map(([m, title, desc]) => (
+                            <button key={m} onClick={() => setSelectedPracticeMode(m)} className={`p-3.5 rounded-xl border-2 transition ${selectedPracticeMode === m ? "bg-blue-50 border-blue-600 shadow-sm" : "bg-slate-50 border-slate-200 hover:border-blue-300"}`}>
+                              <div className="font-extrabold text-sm text-slate-900">{title}</div>
+                              <div className="text-[11px] text-slate-500 mt-1">{desc}</div>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <button onClick={() => startChapterSession(activeChapter.id, selectedPracticeMode, "all")} className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs sm:text-sm font-extrabold shadow">
+                            从第 1 题开始
+                          </button>
+                          {lastIdx >= 0 && (
+                            <button onClick={() => startChapterSession(activeChapter.id, selectedPracticeMode, "all", lastQid)} className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">
+                              继续上次 (第 {lastIdx + 1} 题)
+                            </button>
+                          )}
+                          <button onClick={() => startChapterSession(activeChapter.id, selectedPracticeMode, "unused")} className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50">
+                            只刷未做 ({chQs.length - doneCnt})
+                          </button>
+                          <button onClick={() => startChapterSession(activeChapter.id, selectedPracticeMode, "wrong")} className="px-4 py-2.5 rounded-xl bg-white border border-rose-300 text-rose-700 text-xs font-bold hover:bg-rose-50">
+                            只刷错题 ({wrongCnt})
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Question Grid (Click any number to start from there) */}
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-bold text-sm text-slate-800">章节题号总览（点击任意题号直接从该题开始）：</span>
+                          <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-100 border inline-block" />未做</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-400 inline-block" />做对</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-100 border border-rose-400 inline-block" />做错</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />标记</span>
+                          </div>
+                        </div>
+                        {chQs.length === 0 ? (
+                          <div className="py-8 text-center text-xs text-slate-400">本章节暂无题目，请联系管理员导入</div>
+                        ) : (
+                          <div className="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-12 gap-2">
+                            {chQs.map((q, idx) => {
+                              const att = attemptedMap[q.id];
+                              const isM = markedIds.includes(q.id);
+                              let cls = "bg-slate-50 border-slate-200 text-slate-700 hover:border-blue-400";
+                              if (att) cls = att.lastCorrect ? "bg-emerald-50 border-emerald-400 text-emerald-800" : "bg-rose-50 border-rose-400 text-rose-800";
+                              return (
+                                <button key={q.id} onClick={() => startChapterSession(activeChapter.id, selectedPracticeMode, "all", q.id)} className={`relative py-2 rounded-lg border text-xs font-bold transition ${cls}`}>
+                                  {idx + 1}
+                                  {isM && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </main>
+                  </div>
+                );
+              })()}
+
+              {/* =============================================================== */}
+              {/* VIEW 3: PRACTICE / QUICK / RECITE / TEST INTERFACE              */}
+              {/* =============================================================== */}
+              {view === "PRACTICE" && session && (() => {
+                const curQid = session.qIds[session.currentIndex];
+                const q = questions.find(item => item.id === curQid);
+                if (!q) return null;
+
+                const isRecite = session.mode === "recite";
+                const isTest = session.mode === "test";
+                const isQuick = session.mode === "quick";
+                const isRevealed = isRecite || (isTest ? session.testSubmitted : Boolean(session.submitted[q.id]));
+                const isMarked = markedIds.includes(q.id);
+                const fontSizeCls = textSize === 0 ? "text-sm" : textSize === 2 ? "text-lg" : "text-base";
+                const modeLabel = { practice: "练习模式", quick: "快刷模式", recite: "背题模式", test: "测试模式" }[session.mode];
+                const typeLabel = q.type === "choice" ? (q.isMultiple ? "多选题" : "单选题") : q.type === "blank" ? "填空题" : "案例分析题";
+                const isCorrect = isRevealed ? evaluateQuestion(q, session) : null;
+
+                return (
+                  <div className="flex-1 flex flex-col h-screen overflow-hidden">
+                    <header className="bg-[#1b4b91] text-white px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 shrink-0 shadow">
+                      <div className="flex items-center gap-2.5">
+                        <button onClick={() => setView("CHAPTER_OVERVIEW")} className="px-2.5 py-1 rounded bg-blue-800 hover:bg-blue-700 text-xs font-bold">总览</button>
+                        <div className="text-xs sm:text-sm font-bold leading-tight">
+                          <div>第 {session.currentIndex + 1} / {session.qIds.length} 题 · <span className="text-amber-300">{modeLabel}</span></div>
+                          <div className="text-[10px] text-blue-200 font-mono">{formatTime(session.elapsedSec)}</div>
+                        </div>
+                        <button onClick={() => setMarkedIds(p => p.includes(q.id) ? p.filter(i => i !== q.id) : [...p, q.id])} className={`px-2 py-1 rounded border text-xs font-semibold flex items-center gap-1 ${isMarked ? "bg-rose-600 border-rose-400" : "bg-blue-800/70 border-blue-500"}`}>
+                          <Icon name="flag" className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{isMarked ? "已标记" : "标记"}</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button disabled={session.currentIndex === 0} onClick={() => setSession(p => ({ ...p, currentIndex: p.currentIndex - 1 }))} className="px-2.5 py-1 rounded bg-blue-800 disabled:opacity-40 text-xs font-semibold">上一题</button>
+                        <button disabled={session.currentIndex >= session.qIds.length - 1} onClick={() => setSession(p => ({ ...p, currentIndex: p.currentIndex + 1 }))} className="px-2.5 py-1 rounded bg-blue-800 disabled:opacity-40 text-xs font-semibold">下一题</button>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-xs">
+                        <button onClick={() => setHighlightMode(!highlightMode)} className={`px-2 py-1 rounded ${highlightMode ? "bg-yellow-400 text-slate-950 font-bold" : "hover:bg-blue-800"}`}>荧光笔</button>
+                        <button onClick={() => setShowNotesModal(true)} className="px-2 py-1 rounded hover:bg-blue-800">笔记</button>
+                        <button onClick={() => setDarkMode(!darkMode)} className="px-2 py-1 rounded hover:bg-blue-800"><Icon name={darkMode ? "sun" : "moon"} className="w-4 h-4" /></button>
+                        <button onClick={() => setTextSize(s => (s + 1) % 3)} className="px-2 py-1 rounded hover:bg-blue-800 font-bold">A</button>
+                      </div>
+                    </header>
+
+                    <div className="flex-1 flex overflow-hidden">
+                      {/* Question Number Sidebar */}
+                      <aside className={`w-12 shrink-0 overflow-y-auto border-r flex flex-col items-center py-2 gap-1 ${darkMode ? "bg-slate-900 border-slate-800" : "bg-slate-200 border-slate-300"}`}>
+                        {session.qIds.map((id, idx) => {
+                          const hasAns = Boolean(session.choiceAnswers[id] || (session.blankAnswers[id]?.some(Boolean)) || session.caseAnswers[id]);
+                          const sub = session.submitted[id];
+                          let btnCls = idx === session.currentIndex ? "bg-blue-700 text-white" : hasAns ? "bg-blue-100 text-blue-800" : "";
+                          if (sub && !isTest) {
+                            const qq = questions.find(item => item.id === id);
+                            btnCls = idx === session.currentIndex ? "bg-blue-700 text-white" : (qq && evaluateQuestion(qq, session)) ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800";
+                          }
+                          return (
+                            <button key={id} onClick={() => setSession(p => ({ ...p, currentIndex: idx }))} className={`w-9 h-8 rounded text-xs font-bold ${btnCls}`}>{idx + 1}</button>
+                          );
+                        })}
+                      </aside>
+
+                      {/* Main Question Body */}
+                      <main className={`flex-1 overflow-y-auto p-4 sm:p-8 ${darkMode ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"}`}>
+                        <div className="max-w-4xl mx-auto space-y-6 pb-16">
+                          <div className="flex flex-wrap justify-between items-center gap-2 text-xs">
+                            <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-bold">{typeLabel}</span>
+                            <button onClick={() => {
+                              const sel = window.getSelection()?.toString().trim();
+                              if (sel && sel.length >= 2) setHighlightsMap(p => ({ ...p, [q.id]: [...(p[q.id] || []), sel] }));
+                            }} className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-900 border border-yellow-300">高亮选中文字</button>
+                          </div>
+
+                          <p onMouseUp={() => { if (!highlightMode) return; const sel = window.getSelection()?.toString().trim(); if (sel && sel.length >= 2) setHighlightsMap(p => ({ ...p, [q.id]: [...(p[q.id] || []), sel] })); }} className={`leading-relaxed whitespace-pre-line font-medium ${fontSizeCls}`}>
+                            {renderHighlightedText(q.stem, highlightsMap[q.id] || [])}
+                          </p>
+
+                          {q.image && <img src={q.image} alt="题干配图" onClick={() => setZoomImage(q.image)} className="max-h-72 rounded-lg border mx-auto cursor-zoom-in" />}
+
+                          {/* TYPE 1: CHOICE (SINGLE OR MULTIPLE) */}
+                          {q.type === "choice" && q.options && (
+                            <div className={`rounded-xl border-2 p-3 sm:p-4 space-y-2 ${darkMode ? "border-slate-700 bg-slate-900/60" : "border-sky-200 bg-slate-50/70"}`}>
+                              {Object.entries(q.options).map(([key, text]) => {
+                                const curAns = session.choiceAnswers[q.id] || "";
+                                const isSel = curAns.includes(key);
+                                const isRightOpt = String(q.answer || "").includes(key);
+                                let cls = "border-transparent hover:bg-blue-50/60";
+                                if (!isRevealed && isSel) cls = "bg-blue-100 border-blue-500 text-slate-900";
+                                if (isRevealed) {
+                                  if (isRightOpt) cls = "bg-emerald-50 border-emerald-500 text-slate-900 font-semibold";
+                                  else if (isSel) cls = "bg-rose-50 border-rose-500 text-slate-900";
+                                }
+                                return (
+                                  <button key={key} disabled={isRevealed} onClick={() => {
+                                    if (q.isMultiple) {
+                                      const nextSet = isSel ? curAns.replace(key, "") : (curAns + key).split("").sort().join("");
+                                      setSession(p => ({ ...p, choiceAnswers: { ...p.choiceAnswers, [q.id]: nextSet } }));
+                                    } else {
+                                      if (isQuick) {
+                                        submitSingleInSession(q, key);
+                                      } else {
+                                        setSession(p => ({ ...p, choiceAnswers: { ...p.choiceAnswers, [q.id]: key } }));
+                                      }
+                                    }
+                                  }} className={`w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg border transition ${cls}`}>
+                                    <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${isSel ? "bg-blue-700 text-white border-blue-700" : ""}`}>{key}</span>
+                                    <span className={fontSizeCls}>{text}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* TYPE 2: FILL-IN-THE-BLANK */}
+                          {q.type === "blank" && (
+                            <div className="space-y-3 p-4 rounded-xl border-2 border-indigo-200 bg-indigo-50/30">
+                              {(q.blanks || []).map((exp, idx) => {
+                                const userVal = (session.blankAnswers[q.id] || [])[idx] || "";
+                                const matched = isRevealed ? checkBlankMatch(userVal, exp) : null;
+                                return (
+                                  <div key={idx} className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-600">第 {idx + 1} 空：</label>
+                                    <input
+                                      type="text"
+                                      disabled={isRevealed}
+                                      value={userVal}
+                                      onChange={(e) => {
+                                        const arr = [...(session.blankAnswers[q.id] || [])];
+                                        arr[idx] = e.target.value;
+                                        setSession(p => ({ ...p, blankAnswers: { ...p.blankAnswers, [q.id]: arr } }));
+                                      }}
+                                      placeholder={`输入第 ${idx + 1} 空答案...`}
+                                      className={`w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white text-slate-900 ${isRevealed ? (matched ? "border-emerald-500 bg-emerald-50" : "border-rose-400 bg-rose-50") : "border-slate-300"}`}
+                                    />
+                                    {isRevealed && <div className="text-xs font-bold text-emerald-700">参考答案：{exp}</div>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* TYPE 3: CASE ANALYSIS */}
+                          {q.type === "case" && (
+                            <div className="space-y-4">
+                              {(q.subQuestions || []).map((sub, sIdx) => {
+                                const uSubVal = (session.caseAnswers[q.id] || {})[sIdx] || "";
+                                return (
+                                  <div key={sIdx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 space-y-2.5">
+                                    <div className="font-bold text-sm">{sub.stem}</div>
+                                    {sub.type === "choice" && sub.options ? (
+                                      <div className="space-y-1.5">
+                                        {Object.entries(sub.options).map(([ok, ov]) => {
+                                          const isSel = uSubVal.includes(ok);
+                                          const isRight = String(sub.answer || "").includes(ok);
+                                          let cCls = "bg-white border-slate-200";
+                                          if (!isRevealed && isSel) cCls = "bg-blue-100 border-blue-500";
+                                          if (isRevealed) {
+                                            if (isRight) cCls = "bg-emerald-50 border-emerald-500 font-bold";
+                                            else if (isSel) cCls = "bg-rose-50 border-rose-500";
+                                          }
+                                          return (
+                                            <button key={ok} disabled={isRevealed} onClick={() => {
+                                              const prevMap = session.caseAnswers[q.id] || {};
+                                              setSession(p => ({ ...p, caseAnswers: { ...p.caseAnswers, [q.id]: { ...prevMap, [sIdx]: ok } } }));
+                                            }} className={`w-full text-left px-3 py-2 rounded-lg border text-xs sm:text-sm flex items-center gap-2 ${cCls}`}>
+                                              <span className="font-bold">{ok}.</span><span>{ov}</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <textarea
+                                        rows={3}
+                                        disabled={isRevealed}
+                                        value={uSubVal}
+                                        onChange={(e) => {
+                                          const prevMap = session.caseAnswers[q.id] || {};
+                                          setSession(p => ({ ...p, caseAnswers: { ...p.caseAnswers, [q.id]: { ...prevMap, [sIdx]: e.target.value } } }));
+                                        }}
+                                        placeholder="输入你的临床分析思路与答案..."
+                                        className="w-full border rounded-xl p-3 text-xs sm:text-sm bg-white"
+                                      />
+                                    )}
+                                    {isRevealed && (
+                                      <div className="p-3 rounded-lg bg-emerald-50/80 border border-emerald-200 text-xs space-y-1">
+                                        <div className="font-bold text-emerald-800">参考答案：{sub.answer}</div>
+                                        {sub.explanation && <div className="text-slate-700 whitespace-pre-line">{sub.explanation}</div>}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Submit button for Practice / Quick (for non-single-choice) */}
+                          {!isRevealed && !isTest && (!isQuick || q.isMultiple || q.type !== "choice") && (
+                            <button onClick={() => submitSingleInSession(q)} className="px-7 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white font-bold text-sm shadow">
+                              提交答案
+                            </button>
+                          )}
+
+                          {/* Answer & Explanation Box */}
+                          {isRevealed && (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 text-slate-900 p-5 space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b">
+                                {!isRecite ? (
+                                  <span className={`font-extrabold text-sm ${isCorrect ? "text-emerald-600" : "text-rose-600"}`}>
+                                    {isCorrect ? "✓ 回答正确" : `✗ 回答有误${q.type === "choice" ? ` · 正确答案：${q.answer}` : ""}`}
+                                  </span>
+                                ) : (
+                                  <span className="font-extrabold text-sm text-indigo-700">
+                                    📖 背题模式 · {q.type === "choice" ? `正确答案：${q.answer}` : "标准答案见上方"}
+                                  </span>
+                                )}
+                              </div>
+                              {q.explanation && (
+                                <div className="space-y-1">
+                                  <div className="text-xs font-extrabold text-blue-700">详细解析</div>
+                                  <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line text-slate-800">{q.explanation}</p>
+                                </div>
+                              )}
+                              {q.keyPoint && (
+                                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                                  <div className="text-xs font-extrabold text-amber-800 mb-0.5">核心考点 / 记忆点</div>
+                                  <p className="text-xs sm:text-sm text-amber-950 whitespace-pre-line">{q.keyPoint}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </main>
+                    </div>
+
+                    <footer className="bg-[#1b4b91] text-white px-4 py-2 flex items-center justify-between text-xs shrink-0">
+                      <span className="font-mono">{activeChapter?.name || "刷题中"}</span>
+                      <div className="flex gap-2">
+                        {isTest && !session.testSubmitted ? (
+                          <button onClick={submitEntireTestExam} className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold shadow">交卷并查看成绩</button>
+                        ) : (
+                          <button onClick={() => setView("CHAPTER_OVERVIEW")} className="px-3 py-1 rounded bg-blue-800 font-semibold">返回章节总览</button>
+                        )}
+                      </div>
+                    </footer>
+                  </div>
+                );
+              })()}
+
+              {/* =============================================================== */}
+              {/* VIEW 4: TEST MODE RESULT SUMMARY                                */}
+              {/* =============================================================== */}
+              {view === "TEST_RESULT" && session && (
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <div className="w-full max-w-xl bg-white rounded-2xl border shadow-xl p-8 text-center space-y-5">
+                    <div className="text-xs font-bold text-blue-700">测试模式交卷成绩单</div>
+                    <h2 className="text-2xl font-extrabold text-slate-900">{activeChapter?.name}</h2>
+                    <div className="text-5xl font-black text-blue-700">
+                      {Math.round(((session.testCorrectCount || 0) / Math.max(1, session.qIds.length)) * 100)}%
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      答对 <strong>{session.testCorrectCount || 0}</strong> / {session.qIds.length} 题 · 用时 {formatTime(session.elapsedSec)}
+                    </p>
+                    <div className="flex justify-center gap-3 pt-2">
+                      <button onClick={() => { setSession(p => ({ ...p, currentIndex: 0 })); setView("PRACTICE"); }} className="px-5 py-2.5 rounded-xl bg-blue-700 text-white font-bold text-sm">查看全部答案与解析</button>
+                      <button onClick={() => setView("CHAPTER_OVERVIEW")} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-800 font-bold text-sm">返回章节总览</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* =============================================================== */}
+              {/* MODAL: ADMIN MANAGER (FLEXIBLE TREE, IMPORT, INVITE CODES)      */}
+              {/* =============================================================== */}
+              {showAdminModal && isAdmin && (
+                <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+                  <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[92vh]">
+                    <div className="px-5 py-4 border-b flex flex-wrap justify-between items-center gap-2">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-900">鸭考帮 · 管理员控制台</h3>
+                        <p className="text-[11px] text-slate-500">增删大类/学科/章节/题目后，点击“发布并强制同步至全端”即可推送给所有同学</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button disabled={cloudBusy} onClick={publishGlobalForced} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow">
+                          {cloudBusy ? "发布中..." : "🚀 发布并强制同步至全端"}
+                        </button>
+                        <button onClick={() => setShowAdminModal(false)}><Icon name="x" className="w-5 h-5 text-slate-400" /></button>
+                      </div>
+                    </div>
+
+                    <div className="px-5 pt-3 border-b flex flex-wrap gap-4 text-xs sm:text-sm font-semibold">
+                      {[
+                        ["structure", "1. 学期/学科/章节结构"],
+                        ["import", "2. JSON 批量导入"],
+                        ["addQ", "3. 手动录入题目"],
+                        ["browse", `4. 题库管理 (${questions.length})`],
+                        ["invites", "5. 🔑 邀请码管理"]
+                      ].map(([t, l]) => (
+                        <button key={t} onClick={() => setAdminTab(t)} className={`pb-2.5 border-b-2 ${adminTab === t ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500"}`}>{l}</button>
+                      ))}
+                    </div>
+
+                    <div className="p-5 overflow-y-auto flex-1 text-xs space-y-5">
+                      {/* TAB 1: STRUCTURE */}
+                      {adminTab === "structure" && (
+                        <div className="space-y-5">
+                          {editingNode && (
+                            <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-amber-900">重命名：</span>
+                              <input type="text" value={editingNode.name} onChange={(e) => setEditingNode(p => ({ ...p, name: e.target.value }))} className="flex-1 border rounded-lg px-3 py-1.5 bg-white" />
+                              <button onClick={saveEditedNode} className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-bold">保存</button>
+                              <button onClick={() => setEditingNode(null)} className="px-3 py-1.5 rounded-lg bg-white border">取消</button>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Add Semester */}
+                            <div className="p-4 rounded-xl bg-slate-50 border space-y-2.5">
+                              <div className="font-bold text-slate-800">+ 添加大类（学期）</div>
+                              <input type="text" value={newSemName} onChange={(e) => setNewSemName(e.target.value)} placeholder="如：大四上、考研一轮" className="w-full border rounded-lg px-3 py-2 bg-white" />
+                              <button onClick={addSemester} className="w-full py-2 rounded-lg bg-blue-700 text-white font-bold">添加大类</button>
+                            </div>
+                            {/* Add Subject */}
+                            <div className="p-4 rounded-xl bg-slate-50 border space-y-2.5">
+                              <div className="font-bold text-slate-800">+ 添加学科</div>
+                              <select value={newSubSemId} onChange={(e) => setNewSubSemId(e.target.value)} className="w-full border rounded-lg px-3 py-2 bg-white">
+                                {curriculum.semesters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </select>
+                              <input type="text" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} placeholder="如：寄生虫学、病生" className="w-full border rounded-lg px-3 py-2 bg-white" />
+                              <button onClick={addSubject} className="w-full py-2 rounded-lg bg-indigo-700 text-white font-bold">添加学科</button>
+                            </div>
+                            {/* Add Chapter */}
+                            <div className="p-4 rounded-xl bg-slate-50 border space-y-2.5">
+                              <div className="font-bold text-slate-800">+ 添加章节</div>
+                              <select value={newChSubId} onChange={(e) => setNewChSubId(e.target.value)} className="w-full border rounded-lg px-3 py-2 bg-white">
+                                {curriculum.subjects.map(s => {
+                                  const sem = curriculum.semesters.find(x => x.id === s.semesterId);
+                                  return <option key={s.id} value={s.id}>{sem?.name} · {s.name}</option>;
+                                })}
+                              </select>
+                              <input type="text" value={newChName} onChange={(e) => setNewChName(e.target.value)} placeholder="如：第三章 休克" className="w-full border rounded-lg px-3 py-2 bg-white" />
+                              <button onClick={addChapter} className="w-full py-2 rounded-lg bg-emerald-600 text-white font-bold">添加章节</button>
+                            </div>
+                          </div>
+
+                          {/* Tree View */}
+                          <div className="space-y-3">
+                            {curriculum.semesters.map(sem => (
+                              <div key={sem.id} className="rounded-xl border border-slate-200 overflow-hidden">
+                                <div className="bg-slate-100 px-4 py-2.5 flex items-center justify-between font-bold">
+                                  <span className="text-sm text-slate-900">📁 {sem.name}</span>
+                                  <div className="flex gap-2">
+                                    <button onClick={() => setEditingNode({ kind: "sem", id: sem.id, name: sem.name })} className="text-blue-700">重命名</button>
+                                    <button onClick={() => deleteSemester(sem.id)} className="text-rose-600">删除大类</button>
+                                  </div>
+                                </div>
+                                <div className="p-3 space-y-2.5">
+                                  {curriculum.subjects.filter(s => s.semesterId === sem.id).map(sub => (
+                                    <div key={sub.id} className="rounded-lg border p-3 space-y-2">
+                                      <div className="flex items-center justify-between font-bold text-indigo-800">
+                                        <span>📘 {sub.name}</span>
+                                        <div className="flex gap-2 text-[11px]">
+                                          <button onClick={() => setEditingNode({ kind: "sub", id: sub.id, name: sub.name })} className="text-blue-700">重命名</button>
+                                          <button onClick={() => deleteSubject(sub.id)} className="text-rose-600">删除学科</button>
+                                        </div>
+                                      </div>
+                                      <div className="pl-4 space-y-1">
+                                        {curriculum.chapters.filter(c => c.subjectId === sub.id).map(ch => (
+                                          <div key={ch.id} className="flex items-center justify-between py-1 border-b last:border-0 text-slate-700">
+                                            <span>📄 {ch.name} <span className="text-slate-400">({questions.filter(q => q.chapterId === ch.id).length} 题)</span></span>
+                                            <div className="flex gap-2 text-[11px]">
+                                              <button onClick={() => setEditingNode({ kind: "ch", id: ch.id, name: ch.name })} className="text-blue-700">重命名</button>
+                                              <button onClick={() => deleteChapter(ch.id)} className="text-rose-600">删除</button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB 2: JSON IMPORT */}
+                      {adminTab === "import" && (
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-xl bg-slate-50 border space-y-2">
+                            <div className="font-bold text-slate-700">选择默认导入章节（支持 choice / blank / case 三种题型）：</div>
+                            <div className="flex flex-wrap gap-2 items-center">
+                              <select value={impChapterId} onChange={(e) => setImpChapterId(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 bg-white font-semibold">
+                                {curriculum.chapters.map(c => <option key={c.id} value={c.id}>{getChapterLabel(c.id)}</option>)}
+                              </select>
+                              <label className="px-3 py-2 rounded-lg bg-white border border-blue-300 text-blue-700 font-bold cursor-pointer">
+                                选择 .json 文件
+                                <input type="file" accept=".json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => parseImportJson(String(ev.target?.result || "")); r.readAsText(f); e.target.value = ""; }} />
+                              </label>
+                            </div>
+                          </div>
+                          {impPreview ? (
+                            <div className="p-4 rounded-xl border-2 border-blue-400 bg-blue-50/50 space-y-3">
+                              <div className="flex justify-between font-bold text-blue-800">
+                                <span>预览待导入：{impPreview.length} 道题</span>
+                                <button onClick={() => setImpPreview(null)} className="text-slate-500">取消</button>
+                              </div>
+                              <div className="max-h-52 overflow-y-auto space-y-1.5">
+                                {impPreview.slice(0, 10).map((q, i) => (
+                                  <div key={i} className="p-2 rounded bg-white border">
+                                    <span className="font-bold text-blue-700">[{q.type}]</span> {q.stem.slice(0, 80)}...
+                                  </div>
+                                ))}
+                              </div>
+                              <button onClick={() => { setQuestions(p => [...impPreview, ...p]); setImpPreview(null); setImpJsonText(""); showToast(`已导入 ${impPreview.length} 题！`, "success"); setAdminTab("browse"); }} className="px-5 py-2 rounded-lg bg-blue-700 text-white font-bold">确认导入</button>
+                            </div>
+                          ) : (
+                            <>
+                              <textarea rows={7} value={impJsonText} onChange={(e) => setImpJsonText(e.target.value)} className="w-full border rounded-xl p-3 font-mono" placeholder='粘贴 JSON 数组，如：[{"type":"choice","stem":"...","options":{"A":"...","B":"..."},"answer":"A","explanation":"..."}]' />
+                              <button onClick={() => parseImportJson()} className="px-5 py-2.5 rounded-xl bg-blue-700 text-white font-bold">解析并预览</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* TAB 3: MANUAL ADD QUESTION */}
+                      {adminTab === "addQ" && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select value={qChapterId} onChange={(e) => setQChapterId(e.target.value)} className="border rounded-lg px-3 py-2 bg-white font-semibold">
+                              {curriculum.chapters.map(c => <option key={c.id} value={c.id}>{getChapterLabel(c.id)}</option>)}
+                            </select>
+                            <div className="flex gap-1.5">
+                              {[["choice", "选择题"], ["blank", "填空题"], ["case", "案例分析题"]].map(([t, l]) => (
+                                <button key={t} onClick={() => setQType(t)} className={`flex-1 py-2 rounded-lg font-bold border ${qType === t ? "bg-blue-700 text-white border-blue-700" : "bg-slate-50"}`}>{l}</button>
+                              ))}
+                            </div>
+                          </div>
+                          <textarea rows={3} value={qStem} onChange={(e) => setQStem(e.target.value)} placeholder="输入题干（案例分析题在此输入病例资料）..." className="w-full border rounded-xl p-3" />
+
+                          {qType === "choice" && (
+                            <div className="space-y-2.5 p-3 rounded-xl bg-slate-50 border">
+                              <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={qIsMultiple} onChange={(e) => setQIsMultiple(e.target.checked)} /> <span>多选题</span></label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {["A", "B", "C", "D", "E"].map(k => <input key={k} type="text" value={qOpts[k]} onChange={(e) => setQOpts(p => ({ ...p, [k]: e.target.value }))} placeholder={`选项 ${k}`} className="border rounded-lg px-2.5 py-1.5 bg-white" />)}
+                              </div>
+                              <input type="text" value={qChoiceAns} onChange={(e) => setQChoiceAns(e.target.value)} placeholder="正确答案（单选填 A，多选填 ABC）" className="w-full border rounded-lg px-3 py-2 bg-white font-bold" />
+                            </div>
+                          )}
+
+                          {qType === "blank" && (
+                            <textarea rows={3} value={qBlanksStr} onChange={(e) => setQBlanksStr(e.target.value)} placeholder="每行填一个空的答案（同义答案可用 / 分隔，如：代偿期/早期）" className="w-full border rounded-xl p-3" />
+                          )}
+
+                          {qType === "case" && (
+                            <div className="space-y-3 p-3 rounded-xl bg-slate-50 border">
+                              <div className="flex justify-between items-center font-bold">
+                                <span>案例子问题列表：</span>
+                                <button onClick={() => setQCaseSubs(p => [...p, { type: "text", stem: "", options: { A: "", B: "", C: "", D: "" }, answer: "", explanation: "" }])} className="px-2.5 py-1 rounded bg-blue-700 text-white">+ 添加子问题</button>
+                              </div>
+                              {qCaseSubs.map((sub, idx) => (
+                                <div key={idx} className="p-3 rounded-lg bg-white border space-y-2">
+                                  <div className="flex justify-between">
+                                    <select value={sub.type} onChange={(e) => setQCaseSubs(p => p.map((x, i) => i === idx ? { ...x, type: e.target.value } : x))} className="border rounded px-2 py-1 font-bold">
+                                      <option value="choice">子题：选择题</option>
+                                      <option value="text">子题：简答/分析题</option>
+                                    </select>
+                                    <button onClick={() => setQCaseSubs(p => p.filter((_, i) => i !== idx))} className="text-rose-600">删除</button>
+                                  </div>
+                                  <input type="text" value={sub.stem} onChange={(e) => setQCaseSubs(p => p.map((x, i) => i === idx ? { ...x, stem: e.target.value } : x))} placeholder={`第 ${idx + 1} 问题目`} className="w-full border rounded px-2.5 py-1.5" />
+                                  {sub.type === "choice" && (
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      {["A", "B", "C", "D"].map(ok => (
+                                        <input key={ok} type="text" value={sub.options?.[ok] || ""} onChange={(e) => setQCaseSubs(p => p.map((x, i) => i === idx ? { ...x, options: { ...(x.options || {}), [ok]: e.target.value } } : x))} placeholder={`选项 ${ok}`} className="border rounded px-2 py-1" />
+                                      ))}
+                                    </div>
+                                  )}
+                                  <input type="text" value={sub.answer} onChange={(e) => setQCaseSubs(p => p.map((x, i) => i === idx ? { ...x, answer: e.target.value } : x))} placeholder="该子题参考答案" className="w-full border rounded px-2.5 py-1.5 font-bold" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <textarea rows={2} value={qExp} onChange={(e) => setQExp(e.target.value)} placeholder="总体解析..." className="w-full border rounded-xl p-3" />
+                          <input type="text" value={qKeyPoint} onChange={(e) => setQKeyPoint(e.target.value)} placeholder="核心考点 / 一句话口诀..." className="w-full border rounded-xl px-3 py-2" />
+                          <button onClick={handleSaveManualQuestion} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold">保存题目到本地</button>
+                        </div>
+                      )}
+
+                      {/* TAB 4: BROWSE & BATCH MOVE */}
+                      {adminTab === "browse" && (() => {
+                        const filtered = questions.filter(q =>
+                          (browseChapterFilter === "ALL" || q.chapterId === browseChapterFilter) &&
+                          (browseTypeFilter === "ALL" || q.type === browseTypeFilter)
+                        );
+                        return (
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap gap-2">
+                              <select value={browseChapterFilter} onChange={(e) => setBrowseChapterFilter(e.target.value)} className="border rounded-lg px-2.5 py-1.5 flex-1">
+                                <option value="ALL">全部章节</option>
+                                {curriculum.chapters.map(c => <option key={c.id} value={c.id}>{getChapterLabel(c.id)}</option>)}
+                              </select>
+                              <select value={browseTypeFilter} onChange={(e) => setBrowseTypeFilter(e.target.value)} className="border rounded-lg px-2.5 py-1.5">
+                                <option value="ALL">全部题型</option>
+                                <option value="choice">选择题</option>
+                                <option value="blank">填空题</option>
+                                <option value="case">案例分析</option>
+                              </select>
+                            </div>
+                            <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-wrap items-center gap-2">
+                              <button onClick={() => setSelectedQIds(selectedQIds.length === filtered.length ? [] : filtered.map(q => q.id))} className="px-2.5 py-1 rounded bg-white border font-bold text-indigo-700">
+                                {selectedQIds.length === filtered.length && filtered.length > 0 ? "取消全选" : "全选当前"} ({selectedQIds.length})
+                              </button>
+                              <select value={moveTargetChId} onChange={(e) => setMoveTargetChId(e.target.value)} className="border rounded px-2 py-1 bg-white max-w-xs">
+                                {curriculum.chapters.map(c => <option key={c.id} value={c.id}>{getChapterLabel(c.id)}</option>)}
+                              </select>
+                              <button onClick={() => {
+                                if (!selectedQIds.length || !moveTargetChId) return;
+                                const s = new Set(selectedQIds);
+                                setQuestions(p => p.map(q => s.has(q.id) ? { ...q, chapterId: moveTargetChId } : q));
+                                setSelectedQIds([]);
+                                showToast("已批量移动章节", "success");
+                              }} className="px-3 py-1 rounded bg-indigo-700 text-white font-bold">移动选中</button>
+                              <button onClick={() => {
+                                if (!selectedQIds.length) return;
+                                const s = new Set(selectedQIds);
+                                setQuestions(p => p.filter(q => !s.has(q.id)));
+                                setSelectedQIds([]);
+                                showToast("已批量删除", "info");
+                              }} className="px-3 py-1 rounded bg-rose-600 text-white font-bold">删除选中</button>
+                            </div>
+                            <div className="space-y-2 max-h-72 overflow-y-auto">
+                              {filtered.map(q => (
+                                <div key={q.id} className="p-3 rounded-xl border flex items-center justify-between gap-2">
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <input type="checkbox" checked={selectedQIds.includes(q.id)} onChange={() => setSelectedQIds(p => p.includes(q.id) ? p.filter(x => x !== q.id) : [...p, q.id])} className="mt-1" />
+                                    <div className="min-w-0">
+                                      <div className="font-bold text-blue-700">[{q.type}] {getChapterLabel(q.chapterId)}</div>
+                                      <p className="text-slate-700 line-clamp-1">{q.stem}</p>
+                                    </div>
+                                  </div>
+                                  <button onClick={() => setQuestions(p => p.filter(x => x.id !== q.id))} className="text-slate-400 hover:text-rose-600"><Icon name="trash" className="w-4 h-4" /></button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* TAB 5: INVITE CODE MANAGER */}
+                      {adminTab === "invites" && (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="font-bold text-emerald-900 text-sm">批量生成新邀请码（随时可追加，立即云端生效）</div>
+                              <div className="text-[11px] text-emerald-700">一码一用，同学注册核销后自动标记为“已使用”并记录注册邮箱</div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input type="number" min={1} max={100} value={inviteGenCount} onChange={(e) => setInviteGenCount(e.target.value)} className="w-20 border rounded-lg px-2.5 py-1.5 bg-white font-bold text-center" />
+                              <input type="text" value={inviteGenNote} onChange={(e) => setInviteGenNote(e.target.value)} placeholder="备注(如: 临床2班)" className="w-36 border rounded-lg px-2.5 py-1.5 bg-white" />
+                              <button disabled={inviteBusy} onClick={handleGenerateInvites} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow">
+                                {inviteBusy ? "生成中..." : "+ 生成邀请码"}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="font-bold text-slate-700">
+                              全部邀请码：{inviteList.length} 个 · 未使用 <span className="text-emerald-600">{inviteList.filter(c => c.status === "unused").length}</span> 个 · 已使用 <span className="text-slate-500">{inviteList.filter(c => c.status === "used").length}</span> 个
+                            </div>
+                            <button onClick={() => {
+                              const unused = inviteList.filter(c => c.status === "unused").map(c => c.code).join("\n");
+                              if (!unused) { showToast("暂无未使用的邀请码", "info"); return; }
+                              copyTextSafe(unused);
+                              showToast("已复制全部未使用邀请码！", "success");
+                            }} className="px-3 py-1.5 rounded-lg bg-blue-700 text-white font-bold flex items-center gap-1">
+                              <Icon name="copy" className="w-3.5 h-3.5" /> 一键复制全部可用码
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+                            {inviteList.length === 0 ? (
+                              <div className="col-span-2 text-center py-8 text-slate-400">云端暂无邀请码，点击上方“+ 生成邀请码”即可创建第一批！</div>
+                            ) : inviteList.map(inv => (
+                              <div key={inv.code} className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${inv.status === "used" ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-emerald-200"}`}>
+                                <div className="min-w-0">
+                                  <div className="font-mono font-extrabold text-sm text-slate-900">{inv.code}</div>
+                                  <div className="text-[11px] text-slate-500 truncate">
+                                    {inv.status === "used" ? `已由 ${inv.usedBy} 使用 (${inv.usedAt})` : `未使用 · ${inv.note || "常规"} · ${inv.createdAt}`}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {inv.status === "unused" && (
+                                    <button onClick={() => { copyTextSafe(inv.code); showToast(`已复制 ${inv.code}`, "success"); }} className="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-bold">复制</button>
+                                  )}
+                                  <button onClick={async () => {
+                                    const next = inviteList.filter(x => x.code !== inv.code);
+                                    await saveInvitesToCloud(next).catch(() => {});
+                                    showToast("已移除该邀请码", "info");
+                                  }} className="text-slate-400 hover:text-rose-600"><Icon name="trash" className="w-4 h-4" /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL: FSRS MISTAKES */}
+              {showMistakeModal && (
+                <div className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl p-5 max-h-[88vh] flex flex-col space-y-4">
+                    <div className="flex justify-between items-center border-b pb-3">
+                      <h3 className="font-bold text-lg">FSRS 错题强化 ({dueMistakes.length} 到期)</h3>
+                      <button onClick={() => setShowMistakeModal(false)}><Icon name="x" className="w-5 h-5" /></button>
+                    </div>
+                    <div className="overflow-y-auto flex-1 space-y-4">
+                      {!dueMistakes[0] ? (
+                        <div className="text-center py-12 text-slate-500">🎉 今日到期错题已全部复习完毕！</div>
+                      ) : (() => {
+                        const mq = dueMistakes[0].question;
+                        return (
+                          <div className="space-y-4">
+                            <div className="text-xs font-bold text-blue-700">{getChapterLabel(mq.chapterId)}</div>
+                            <p className="text-sm leading-relaxed whitespace-pre-line">{mq.stem}</p>
+                            {mq.type === "choice" && mq.options && (
+                              <div className="space-y-1.5">
+                                {Object.entries(mq.options).map(([k, v]) => (
+                                  <div key={k} className={`px-3 py-2 rounded-lg border text-xs ${mistakeRevealed && String(mq.answer).includes(k) ? "bg-emerald-50 border-emerald-500 font-bold" : "bg-white"}`}>{k}. {v}</div>
+                                ))}
+                              </div>
+                            )}
+                            {mistakeRevealed && (
+                              <div className="p-4 rounded-xl bg-slate-50 border text-xs space-y-1">
+                                <div className="font-bold text-emerald-700">
+                                  参考答案：{mq.type === "choice" ? mq.answer : mq.type === "blank" ? (mq.blanks || []).join(" / ") : "见各子题解析"}
+                                </div>
+                                <p className="whitespace-pre-line text-slate-700">{mq.explanation}</p>
+                              </div>
+                            )}
+                            {!mistakeRevealed ? (
+                              <button onClick={() => setMistakeRevealed(true)} className="w-full py-2.5 rounded-xl bg-blue-700 text-white font-bold text-sm">显示答案与解析</button>
+                            ) : (
+                              <div className="grid grid-cols-4 gap-2">
+                                {[[1, "Again", "bg-rose-600"], [2, "Hard", "bg-amber-600"], [3, "Good", "bg-emerald-600"], [4, "Easy", "bg-sky-600"]].map(([g, l, c]) => (
+                                  <button key={g} onClick={() => {
+                                    const next = fsrsSchedule(dueMistakes[0].fsrs, g, 0.90);
+                                    setMistakes(p => p.map(m => m.id === mq.id ? { ...m, fsrs: next } : m));
+                                    setMistakeRevealed(false);
+                                  }} className={`${c} text-white rounded-xl py-2 text-xs font-bold`}>{l} ({formatFsrsInterval(fsrsSchedule(dueMistakes[0].fsrs, g, 0.90))})</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL: NOTES */}
+              {showNotesModal && session && (() => {
+                const curId = session.qIds[session.currentIndex];
+                return (
+                  <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
+                    <div className="w-full max-w-lg bg-white text-slate-900 rounded-2xl p-5 space-y-3">
+                      <div className="flex justify-between font-bold text-sm"><span>个人题目笔记</span><button onClick={() => setShowNotesModal(false)}><Icon name="x" className="w-4 h-4" /></button></div>
+                      <textarea rows={6} value={notesMap[curId] || ""} onChange={(e) => setNotesMap(p => ({ ...p, [curId]: e.target.value }))} placeholder="记录本题易错点或老师口头补充..." className="w-full border rounded-xl p-3 text-sm" />
+                      <button onClick={() => setShowNotesModal(false)} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-xs font-bold">保存笔记</button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* MODAL: AUTH & CLOUD SYNC */}
+              {showAuthModal && (
+                <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4">
+                  <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-4 text-xs">
+                    <div className="flex justify-between font-bold text-base"><span>账号与云端进度同步</span><button onClick={() => setShowAuthModal(false)}><Icon name="x" className="w-5 h-5" /></button></div>
+                    <div className="p-3 bg-slate-50 rounded-xl border flex justify-between items-center">
+                      <span>当前账号: <strong>{currentUser}</strong> {isAdmin && <span className="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">管理员</span>}</span>
+                      <button onClick={() => { manualLogoutRef.current = true; switchToUser("guest"); setShowAuthModal(false); }} className="text-rose-600 font-bold">退出登录</button>
+                    </div>
+                    <div className="flex gap-2">
+                      <button disabled={cloudBusy} onClick={() => syncUserPersonalSave("push")} className="flex-1 py-2.5 rounded-xl bg-blue-700 text-white font-bold">上传个人做题/打卡进度</button>
+                      <button disabled={cloudBusy} onClick={() => syncUserPersonalSave("pull")} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold">拉取个人进度</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {zoomImage && <div onClick={() => setZoomImage(null)} className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"><img src={zoomImage} alt="" className="max-w-full max-h-[90vh] rounded-lg" /></div>}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
