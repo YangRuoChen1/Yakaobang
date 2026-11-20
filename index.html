@@ -755,6 +755,15 @@
         return "";
       };
 
+      const readErrMsg = async (res) => {
+        try {
+          const t = await res.text();
+          return `HTTP ${res.status}: ${t.slice(0, 140)}`;
+        } catch {
+          return `HTTP ${res.status}`;
+        }
+      };
+
       const restFetch = async (url, options = {}, isWrite = null) => {
         const writeMode = isWrite !== null ? isWrite : ["POST", "PUT", "PATCH"].includes(String(options.method || "GET").toUpperCase());
         const res = await fetch(url, { ...options, headers: { ...getAuthHeaders(writeMode), ...(options.headers || {}) } });
@@ -831,7 +840,7 @@
               method: "POST",
               body: JSON.stringify({ username: GLOBAL_CHUNK_PREFIX + i, data: { items: chunks[i].items, bytes: chunks[i].bytes } })
             });
-            if (!r.ok) throw new Error("分片上传 HTTP " + r.status);
+            if (!r.ok) throw new Error(await readErrMsg(r));
             doneBytes += chunks[i].bytes;
           }
 
@@ -840,7 +849,7 @@
             method: "POST",
             body: JSON.stringify({ username: GLOBAL_META_KEY, data: meta })
           });
-          if (!mr.ok) throw new Error("Meta HTTP " + mr.status);
+          if (!mr.ok) throw new Error(await readErrMsg(mr));
           safeSetLS("ykb_local_global_version", nextCur.version);
           setSyncProgress(null);
           showToast(`发布成功！共 ${chunks.length} 个分片 (${Math.round(totalBytes / 1024)} KB)，全端将自动增量拉取`, "success");
@@ -907,11 +916,11 @@
               method: "POST",
               body: JSON.stringify({ username: SLIDES_CHUNK_PREFIX + i, data: { items: chunks[i].items, bytes: chunks[i].bytes } })
             });
-            if (!r.ok) throw new Error(r.status === 401 ? "401 登录凭证已过期，请点右上角退出后重新登录一次" : ("HTTP " + r.status));
+            if (!r.ok) throw new Error(await readErrMsg(r));
             doneBytes += chunks[i].bytes;
           }
           const meta = { version: ver, cleared: false, totalSlides: slides.length, chunkCount: chunks.length, totalBytes, updatedAt: new Date().toISOString() };
-          const smr = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, { method: "POST", body: JSON.stringify({ username: SLIDES_META_KEY, data: meta }) }); if (!smr.ok) throw new Error("HTTP " + smr.status);
+          const smr = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, { method: "POST", body: JSON.stringify({ username: SLIDES_META_KEY, data: meta }) }); if (!smr.ok) throw new Error(await readErrMsg(smr));
           safeSetLS("ykb_local_slides_version", ver);
           setSlidesEnabled(true);
           setSyncProgress(null);
@@ -1031,10 +1040,11 @@
               if (nr.ok) dirtyNotesRef.current = false;
             }
             if (!useKeepalive) setSyncProgress({ label: "正在写入云端同步时间戳...", pct: 90, detail: "即将完成" });
-            await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
+            const mr = await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
               method: "POST", headers: hdrs, keepalive: useKeepalive,
               body: JSON.stringify({ username: uMetaKey, data: { updatedAt: nowMs, progUpdatedAt: nowMs, notesUpdatedAt: nowMs } })
             });
+            if (!mr.ok && !useKeepalive) throw new Error(await readErrMsg(mr));
             safeSetLS(getUserKey(currentUser, "lastSyncAt"), nowMs);
             setHasUnsynced(dirtyProgRef.current || dirtyNotesRef.current);
             if (!useKeepalive) {
@@ -1185,7 +1195,7 @@
           method: "POST",
           body: JSON.stringify({ username: INVITE_CLOUD_KEY, data: { codes, updatedAt: new Date().toISOString() } })
         });
-        if (!res.ok) throw new Error(res.status === 401 ? "401 登录凭证已过期，请点右上角退出后重新登录一次" : ("HTTP " + res.status));
+        if (!res.ok) throw new Error(await readErrMsg(res));
         setInviteList(codes);
       };
 
