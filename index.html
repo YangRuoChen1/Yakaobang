@@ -755,12 +755,13 @@
         return "";
       };
 
-      const restFetch = async (url, options = {}, isWrite = false) => {
-        const res = await fetch(url, { ...options, headers: { ...getAuthHeaders(isWrite), ...(options.headers || {}) } });
+      const restFetch = async (url, options = {}, isWrite = null) => {
+        const writeMode = isWrite !== null ? isWrite : ["POST", "PUT", "PATCH"].includes(String(options.method || "GET").toUpperCase());
+        const res = await fetch(url, { ...options, headers: { ...getAuthHeaders(writeMode), ...(options.headers || {}) } });
         if (res.status === 401) {
           const fresh = await refreshSessionToken();
           if (fresh) {
-            return await fetch(url, { ...options, headers: { ...getAuthHeaders(isWrite, fresh), ...(options.headers || {}) } });
+            return await fetch(url, { ...options, headers: { ...getAuthHeaders(writeMode, fresh), ...(options.headers || {}) } });
           }
         }
         return res;
