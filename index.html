@@ -471,6 +471,7 @@
     function App() {
       const [currentUser, setCurrentUser] = useState(() => safeGetLS(CURRENT_USER_KEY, "guest"));
       const [userToken, setUserToken] = useState(() => safeGetLS("ykb_access_token_v1", ""));
+      const [refreshToken, setRefreshToken] = useState(() => safeGetLS("ykb_refresh_token_v1", ""));
       const isAdmin = ADMIN_EMAILS.includes(String(currentUser || "").toLowerCase());
       const cloudCfg = DEFAULT_CLOUD_CFG;
 
@@ -532,6 +533,7 @@
 
       useEffect(() => { safeSetLS(CURRENT_USER_KEY, currentUser); }, [currentUser]);
       useEffect(() => { safeSetLS("ykb_access_token_v1", userToken); }, [userToken]);
+      useEffect(() => { safeSetLS("ykb_refresh_token_v1", refreshToken); }, [refreshToken]);
       useEffect(() => { if (idbReady) idbSet("ykb_global_curriculum_v1", curriculum); }, [curriculum, idbReady]);
       useEffect(() => { if (idbReady) idbSet("ykb_global_questions_v1", questions); }, [questions, idbReady]);
       useEffect(() => { if (idbReady) idbSet("ykb_global_slides_v1", slides); }, [slides, idbReady]);
@@ -724,10 +726,42 @@
       const todayAccuracy = todayStats.qCount > 0 ? Math.round((todayStats.qCorrect / todayStats.qCount) * 100) : null;
       const checkInStats = useMemo(() => computeCheckInStats(dailyLogs), [dailyLogs]);
 
-      const getAuthHeaders = (isWrite = false) => {
-        const h = { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + (userToken || cloudCfg.anonKey) };
+      const getAuthHeaders = (isWrite = false, tokenOverride = null) => {
+        const tok = tokenOverride !== null ? tokenOverride : (userToken || cloudCfg.anonKey);
+        const h = { "apikey": cloudCfg.anonKey, "Authorization": "Bearer " + tok };
         if (isWrite) { h["Content-Type"] = "application/json"; h["Prefer"] = "resolution=merge-duplicates"; }
         return h;
+      };
+
+      const refreshSessionToken = async () => {
+        const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+        if (refreshToken) {
+          try {
+            const r = await fetch(`${baseUrl}/auth/v1/token?grant_type=refresh_token`, {
+              method: "POST",
+              headers: { "apikey": cloudCfg.anonKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ refresh_token: refreshToken })
+            });
+            const d = await r.json();
+            if (r.ok && d.access_token) {
+              setUserToken(d.access_token);
+              if (d.refresh_token) setRefreshToken(d.refresh_token);
+              return d.access_token;
+            }
+          } catch {}
+        }
+        return "";
+      };
+
+      const restFetch = async (url, options = {}, isWrite = false) => {
+        const res = await fetch(url, { ...options, headers: { ...getAuthHeaders(isWrite), ...(options.headers || {}) } });
+        if (res.status === 401) {
+          const fresh = await refreshSessionToken();
+          if (fresh) {
+            return await fetch(url, { ...options, headers: { ...getAuthHeaders(isWrite, fresh), ...(options.headers || {}) } });
+          }
+        }
+        return res;
       };
 
       // =========================================================================
@@ -790,9 +824,8 @@
 
           for (let i = 0; i < chunks.length; i++) {
             setSyncProgress({ label: `发布分片 ${i + 1}/${chunks.length}`, done: i, total: chunks.length, kbDone: Math.round(doneBytes / 1024), kbTotal: Math.round(totalBytes / 1024) });
-            const r = await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
+            const r = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
               method: "POST",
-              headers: getAuthHeaders(true),
               body: JSON.stringify({ username: GLOBAL_CHUNK_PREFIX + i, data: { items: chunks[i].items, bytes: chunks[i].bytes } })
             });
             if (!r.ok) throw new Error("分片上传 HTTP " + r.status);
@@ -800,9 +833,8 @@
           }
 
           const meta = { version: nextCur.version, totalQuestions: questions.length, chunkCount: chunks.length, totalBytes, curriculum: nextCur, updatedAt: new Date().toISOString(), updatedBy: currentUser };
-          const mr = await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
+          const mr = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
             method: "POST",
-            headers: getAuthHeaders(true),
             body: JSON.stringify({ username: GLOBAL_META_KEY, data: meta })
           });
           if (!mr.ok) throw new Error("Meta HTTP " + mr.status);
@@ -868,15 +900,15 @@
           let doneBytes = 0;
           for (let i = 0; i < chunks.length; i++) {
             setSyncProgress({ label: `发布切片分片 ${i + 1}/${chunks.length}`, done: i, total: chunks.length, kbDone: Math.round(doneBytes / 1024), kbTotal: Math.round(totalBytes / 1024) });
-            const r = await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
-              method: "POST", headers: getAuthHeaders(true),
+            const r = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
+              method: "POST",
               body: JSON.stringify({ username: SLIDES_CHUNK_PREFIX + i, data: { items: chunks[i].items, bytes: chunks[i].bytes } })
             });
-            if (!r.ok) throw new Error("HTTP " + r.status);
+            if (!r.ok) throw new Error(r.status === 401 ? "401 登录凭证已过期，请点右上角退出后重新登录一次" : ("HTTP " + r.status));
             doneBytes += chunks[i].bytes;
           }
           const meta = { version: ver, cleared: false, totalSlides: slides.length, chunkCount: chunks.length, totalBytes, updatedAt: new Date().toISOString() };
-          await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ username: SLIDES_META_KEY, data: meta }) });
+          const smr = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, { method: "POST", body: JSON.stringify({ username: SLIDES_META_KEY, data: meta }) }); if (!smr.ok) throw new Error("HTTP " + smr.status);
           safeSetLS("ykb_local_slides_version", ver);
           setSlidesEnabled(true);
           setSyncProgress(null);
@@ -891,8 +923,8 @@
         const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
         try {
           const ver = Date.now();
-          await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
-            method: "POST", headers: getAuthHeaders(true),
+          const cr = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
+            method: "POST",
             body: JSON.stringify({ username: SLIDES_META_KEY, data: { version: ver, cleared: true, totalSlides: 0, chunkCount: 0 } })
           });
           setSlides([]);
@@ -1067,7 +1099,7 @@
             });
             const data = await res.json();
             if (res.ok && (data.user?.email || cred.email)) {
-              if (data.access_token) setUserToken(data.access_token);
+              if (data.access_token) setUserToken(data.access_token); if (data.refresh_token) setRefreshToken(data.refresh_token);
               setCurrentUser(data.user?.email || cred.email);
               showToast(`已自动登录：${data.user?.email || cred.email}`, "success");
             }
@@ -1094,11 +1126,11 @@
 
       const saveInvitesToCloud = async (codes) => {
         const baseUrl = cloudCfg.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
-        const res = await fetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
-          method: "POST", headers: getAuthHeaders(true),
+        const res = await restFetch(`${baseUrl}/rest/v1/${TABLE_NAME}`, {
+          method: "POST",
           body: JSON.stringify({ username: INVITE_CLOUD_KEY, data: { codes, updatedAt: new Date().toISOString() } })
         });
-        if (!res.ok) throw new Error("HTTP " + res.status);
+        if (!res.ok) throw new Error(res.status === 401 ? "401 登录凭证已过期，请点右上角退出后重新登录一次" : ("HTTP " + res.status));
         setInviteList(codes);
       };
 
@@ -1179,7 +1211,7 @@
             if (rememberPwd || autoLogin) safeSetLS(SAVED_CRED_KEY, { rememberPwd: true, autoLogin, email, pwdEnc: encodeCred(authPassword) });
             else safeSetLS(SAVED_CRED_KEY, { rememberPwd: false, autoLogin: false, email: "", pwdEnc: "" });
             manualLogoutRef.current = false;
-            if (data.access_token) setUserToken(data.access_token);
+            if (data.access_token) setUserToken(data.access_token); if (data.refresh_token) setRefreshToken(data.refresh_token);
             setCurrentUser(data.user?.email || email);
             pullGlobalIncremental(false, true);
             setShowAuthModal(false);
@@ -1190,7 +1222,7 @@
             const res = await fetch(`${baseUrl}/auth/v1/token?grant_type=password`, { method: "POST", headers, body: JSON.stringify({ email, password: authPassword }) });
             const data = await res.json();
             if (!res.ok) throw new Error("尚未检测到邮箱激活，请先去邮箱点击 Confirm email address 链接");
-            if (data.access_token) setUserToken(data.access_token);
+            if (data.access_token) setUserToken(data.access_token); if (data.refresh_token) setRefreshToken(data.refresh_token);
             setCurrentUser(data.user?.email || email);
             setShowAuthModal(false); setAuthPassword(""); setAuthInviteCode(""); setOtpSent(false);
             showToast("注册激活成功！", "success");
@@ -2804,7 +2836,7 @@
                     <div className="flex justify-between font-bold text-base"><span>账号、增量同步与本地保底备份</span><button onClick={() => setShowAuthModal(false)}><Icon name="x" className="w-5 h-5" /></button></div>
                     <div className="p-3 bg-slate-50 rounded-xl border flex justify-between items-center">
                       <span>当前账号: <strong>{currentUser}</strong> {isAdmin && <span className="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">管理员</span>}</span>
-                      <button onClick={async () => { await syncUserProgress("push", true); manualLogoutRef.current = true; setUserToken(""); setCurrentUser("guest"); setShowAuthModal(false); }} className="text-rose-600 font-bold">保存并退出</button>
+                      <button onClick={async () => { await syncUserProgress("push", true); manualLogoutRef.current = true; setUserToken(""); setRefreshToken(""); setCurrentUser("guest"); setShowAuthModal(false); }} className="text-rose-600 font-bold">保存并退出</button>
                     </div>
                     <div className="flex gap-2">
                       <button disabled={cloudBusy} onClick={() => syncUserProgress("push", false)} className="flex-1 py-2.5 rounded-xl bg-blue-700 text-white font-bold">增量上传进度与笔记</button>
