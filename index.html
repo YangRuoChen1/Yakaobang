@@ -429,6 +429,42 @@
       return { text: val.text || "", images: Array.isArray(val.images) ? val.images : [], updatedAt: val.updatedAt || 0 };
     }
 
+    function normalizeSlide(x, idx = 0) {
+      let features = x.features || "";
+      if (!features && (x.diagnosticBasis || Array.isArray(x.morphologyFeatures))) {
+        const parts = [];
+        if (x.diagnosticBasis) parts.push("【核心诊断依据】" + x.diagnosticBasis);
+        if (Array.isArray(x.morphologyFeatures) && x.morphologyFeatures.length > 0) {
+          parts.push(x.morphologyFeatures.map(m => "• " + m).join("\n"));
+        }
+        features = parts.join("\n\n");
+      }
+      let confusing = x.confusing || "";
+      if (!confusing && Array.isArray(x.differentialDiagnosis)) {
+        confusing = x.differentialDiagnosis.map(d => `• 【vs ${d.confusedWith}】${d.keyDifference}`).join("\n");
+      }
+      const tips = x.tips || x.examTips || "";
+      const anns = (Array.isArray(x.annotations) ? x.annotations : []).map((a, aIdx) => ({
+        id: a.id || String.fromCharCode(99 + aIdx),
+        label: a.label || `结构 ${aIdx + 1}`,
+        desc: a.desc || "",
+        x: Number(a.rect?.x ?? a.x ?? 0),
+        y: Number(a.rect?.y ?? a.y ?? 0),
+        w: Number(a.rect?.width ?? a.w ?? 20),
+        h: Number(a.rect?.height ?? a.h ?? 20)
+      }));
+      return {
+        id: x.id || `sl_${Date.now()}_${idx}`,
+        name: x.name || `未命名切片 ${idx + 1}`,
+        category: x.category || "镜检切片",
+        image: x.image || "",
+        features,
+        confusing,
+        tips,
+        annotations: anns
+      };
+    }
+
     // =========================================================================
     // 5. MAIN APPLICATION
     // =========================================================================
@@ -2598,7 +2634,7 @@
                                   r.onload = (ev) => {
                                     try {
                                       const arr = JSON.parse(String(ev.target?.result || ""));
-                                      const list = (Array.isArray(arr) ? arr : [arr]).filter(x => x && x.name && x.image).map((x, idx) => ({ ...x, id: x.id || `sl_${Date.now()}_${idx}`, annotations: Array.isArray(x.annotations) ? x.annotations : [] }));
+                                      const list = (Array.isArray(arr) ? arr : [arr]).filter(x => x && x.name).map((x, idx) => normalizeSlide(x, idx));
                                       setSlPreview(list);
                                     } catch { showToast("JSON 格式有误", "error"); }
                                   };
@@ -2620,12 +2656,48 @@
                                 {slJsonText.trim() && <button onClick={() => {
                                   try {
                                     const arr = JSON.parse(slJsonText.trim());
-                                    const list = (Array.isArray(arr) ? arr : [arr]).filter(x => x && x.name && x.image).map((x, idx) => ({ ...x, id: x.id || `sl_${Date.now()}_${idx}`, annotations: Array.isArray(x.annotations) ? x.annotations : [] }));
+                                    const list = (Array.isArray(arr) ? arr : [arr]).filter(x => x && x.name).map((x, idx) => normalizeSlide(x, idx));
                                     setSlPreview(list); setSlJsonText("");
                                   } catch { showToast("JSON 格式有误", "error"); }
                                 }} className="px-4 py-1.5 rounded-lg bg-blue-700 text-white font-bold">解析 JSON</button>}
                               </>
                             )}
+                          </div>
+
+                          {/* Batch Match Local Images for relative paths like images/001.jpg */}
+                          <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="font-bold text-amber-950">🖼️ 批量关联本地图片（解决 images/001.jpg 无法显示问题）</div>
+                              <div className="text-[11px] text-amber-800">
+                                当前共有 <strong>{slides.filter(sl => sl.image && !sl.image.startsWith("data:") && !sl.image.startsWith("http")).length}</strong> 张切片使用本地相对路径。打开你的 <code>images</code> 文件夹全选所有图片（Ctrl+A）一次性导入即可自动压缩匹配！
+                              </div>
+                            </div>
+                            <label className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold cursor-pointer shadow">
+                              📁 批量选择图片自动匹配
+                              <input type="file" multiple accept="image/*" className="hidden" onChange={async (e) => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length === 0) return;
+                                showToast(`正在压缩并匹配 ${files.length} 张图片，请稍候...`, "info");
+                                const map = new Map();
+                                for (const f of files) {
+                                  try {
+                                    const uri = await compressImageFile(f, 1200, 0.80);
+                                    map.set(f.name.toLowerCase(), uri);
+                                  } catch {}
+                                }
+                                let matchedCnt = 0;
+                                setSlides(prev => prev.map(sl => {
+                                  const fname = String(sl.image || "").split(/[\\/]/).pop().toLowerCase();
+                                  if (fname && map.has(fname)) {
+                                    matchedCnt++;
+                                    return { ...sl, image: map.get(fname) };
+                                  }
+                                  return sl;
+                                }));
+                                showToast(`成功匹配并填入 ${matchedCnt} 张切片图片！记得点“发布切片库至全端”`, "success");
+                                e.target.value = "";
+                              }} />
+                            </label>
                           </div>
 
                           {/* Visual Red-Box Annotation Editor */}
